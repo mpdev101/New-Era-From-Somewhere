@@ -3,27 +3,13 @@
   "features": [
     {
       "type": "Feature",
-      "properties": {
-        "plot_id": "A1",
-        "dry_mass_ton": 2.5,
-        "carbon_credit": 4.5
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [100.5, 18.3]
-      }
+      "properties": {"plot_id": "A1", "dry_mass_ton": 2.5, "carbon_credit": 4.5},
+      "geometry": {"type": "Point", "coordinates": [100.5, 18.3]}
     },
     {
       "type": "Feature",
-      "properties": {
-        "plot_id": "B2",
-        "dry_mass_ton": 1.8,
-        "carbon_credit": 3.2
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [100.6, 18.35]
-      }
+      "properties": {"plot_id": "B2", "dry_mass_ton": 1.8, "carbon_credit": 3.2},
+      "geometry": {"type": "Point", "coordinates": [100.6, 18.35]}
     }
   ]
 }

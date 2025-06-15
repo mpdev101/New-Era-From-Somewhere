@@ -1,99 +1,89 @@
+<!-- Demo: Google Maps Integration with GeoJSON and Search -->
 <!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Demo Interactive Map with Search</title>
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- Geocoder CSS (Leaflet Control Geocoder) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <title>Demo Google Maps GeoJSON</title>
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; }
-    #controls { padding: 10px; background: #f0f0f0; text-align: center; }
-    #controls button { margin: 0 5px; padding: 8px 12px; }
-    #map { height: 80vh; }
+    /* Basic resets */
+    html, body { height: 100%; margin: 0; padding: 0; }
+    #map { height: 80%; }
+    #controls { height: 20%; padding: 10px; background: #f0f0f0; }
+    #autocomplete { width: 300px; padding: 8px; }
+    button { padding: 8px 12px; margin: 0 5px; }
   </style>
 </head>
 <body>
-  <div id="controls"><!-- Buttons injected here --></div>
+  <div id="controls">
+    <input id="autocomplete" type="text" placeholder="ค้นหาสถานที่">
+    <button onclick="fitToAll()">Show All Plots</button>
+  </div>
   <div id="map"></div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <!-- Geocoder JS -->
-  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <!-- Include the Google Maps JavaScript API with Places library -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places&language=th"
+    async defer></script>
   <script>
-    let map, layer, data;
+    let map;
+    let markers = [];
+    let bounds;
 
-    // Initialize the map and add OSM tiles with labels
     function initMap() {
-      map = L.map('map').setView([18.3, 100.5], 10);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
+      // 1) Initialize the map centered on Thailand
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 18.3, lng: 100.5 },
+        zoom: 7,
+        mapTypeId: 'roadmap'
+      });
 
-      // Add search box (Nominatim geocoder)
-      L.Control.geocoder({
-        collapsed: false,
-        position: 'topleft'
-      }).addTo(map);
+      // 2) Setup Places Autocomplete for search box
+      const input = document.getElementById('autocomplete');
+      const autocomplete = new google.maps.places.Autocomplete(input);
+      autocomplete.bindTo('bounds', map);
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry) return;
+        map.panTo(place.geometry.location);
+        map.setZoom(12);
+      });
 
-      loadData();
-    }
-
-    // Load GeoJSON and build map & UI
-    function loadData() {
+      // 3) Load GeoJSON data and add markers
       fetch('public/call.geojson')
         .then(res => res.json())
-        .then(json => {
-          data = json;
-          layer = L.geoJSON(data, {
-            pointToLayer: (feat, latlng) => L.circleMarker(latlng, { radius: 6, color: '#2a9d8f' }),
-            onEachFeature: (feat, lyr) => {
-              lyr.bindPopup(
-                `<strong>${feat.properties.plot_id}</strong><br>` +
-                `Carbon: ${feat.properties.carbon_credit} tCO₂`
-              );
-            }
-          }).addTo(map);
-          map.fitBounds(layer.getBounds());
-          buildControls();
+        .then(data => {
+          bounds = new google.maps.LatLngBounds();
+          data.features.forEach(feature => {
+            const coords = feature.geometry.coordinates;
+            const latlng = { lat: coords[1], lng: coords[0] };
+            const marker = new google.maps.Marker({
+              position: latlng,
+              map: map,
+              title: feature.properties.plot_id
+            });
+            // InfoWindow for each marker
+            const infowindow = new google.maps.InfoWindow({
+              content: `<strong>${feature.properties.plot_id}</strong><br>` +
+                       `CO₂: ${feature.properties.carbon_credit} tCO₂`
+            });
+            marker.addListener('click', () => infowindow.open(map, marker));
+            markers.push(marker);
+            bounds.extend(latlng);
+          });
+          // Fit map to markers
+          map.fitBounds(bounds);
         })
         .catch(err => console.error('Error loading GeoJSON:', err));
     }
 
-    // Create dynamic filter buttons
-    function buildControls() {
-      const ctrl = document.getElementById('controls');
-      // Show All
-      const btnAll = document.createElement('button');
-      btnAll.textContent = 'Show All';
-      btnAll.onclick = () => filterFeature();
-      ctrl.appendChild(btnAll);
-      // One per plot
-      data.features.forEach(f => {
-        const id = f.properties.plot_id;
-        const btn = document.createElement('button');
-        btn.textContent = id;
-        btn.onclick = () => filterFeature(id);
-        ctrl.appendChild(btn);
-      });
+    // Fit map to show all markers
+    function fitToAll() {
+      if (bounds) map.fitBounds(bounds);
     }
 
-    // Filter function: no id => all, else specific
-    function filterFeature(id) {
-      layer.clearLayers();
-      const feats = id ? data.features.filter(f => f.properties.plot_id === id)
-                       : data.features;
-      layer.addData({ type: 'FeatureCollection', features: feats });
-      if (feats.length) {
-        const temp = L.geoJSON(feats);
-        map.fitBounds(temp.getBounds());
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', initMap);
+    // Initialize map after API loads
+    window.initMap = initMap;
   </script>
 </body>
 </html>

@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Demo Interactive Map</title>
+  <title>Demo Interactive Map with Search</title>
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- Geocoder CSS (Leaflet Control Geocoder) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <style>
     body { margin: 0; font-family: Arial, sans-serif; }
     #controls { padding: 10px; background: #f0f0f0; text-align: center; }
@@ -14,24 +16,33 @@
   </style>
 </head>
 <body>
-  <div id="controls"><!-- Buttons will be injected here --></div>
+  <div id="controls"><!-- Buttons injected here --></div>
   <div id="map"></div>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <!-- Geocoder JS -->
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
   <script>
     let map, layer, data;
 
-    // 1) Initialize map
+    // Initialize the map and add OSM tiles with labels
     function initMap() {
-      map = L.map('map').setView([18.3, 100.5], 6);
+      map = L.map('map').setView([18.3, 100.5], 10);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(map);
+
+      // Add search box (Nominatim geocoder)
+      L.Control.geocoder({
+        collapsed: false,
+        position: 'topleft'
+      }).addTo(map);
+
       loadData();
     }
 
-    // 2) Fetch call.geojson and build map + UI
+    // Load GeoJSON and build map & UI
     function loadData() {
       fetch('public/call.geojson')
         .then(res => res.json())
@@ -40,7 +51,10 @@
           layer = L.geoJSON(data, {
             pointToLayer: (feat, latlng) => L.circleMarker(latlng, { radius: 6, color: '#2a9d8f' }),
             onEachFeature: (feat, lyr) => {
-              lyr.bindPopup(`<strong>${feat.properties.plot_id}</strong><br>CO₂: ${feat.properties.carbon_credit} tCO₂`);
+              lyr.bindPopup(
+                `<strong>${feat.properties.plot_id}</strong><br>` +
+                `Carbon: ${feat.properties.carbon_credit} tCO₂`
+              );
             }
           }).addTo(map);
           map.fitBounds(layer.getBounds());
@@ -49,16 +63,15 @@
         .catch(err => console.error('Error loading GeoJSON:', err));
     }
 
-    // 3) Create buttons dynamically
+    // Create dynamic filter buttons
     function buildControls() {
       const ctrl = document.getElementById('controls');
-      // Show All button
+      // Show All
       const btnAll = document.createElement('button');
       btnAll.textContent = 'Show All';
       btnAll.onclick = () => filterFeature();
       ctrl.appendChild(btnAll);
-
-      // One button per feature
+      // One per plot
       data.features.forEach(f => {
         const id = f.properties.plot_id;
         const btn = document.createElement('button');
@@ -68,10 +81,11 @@
       });
     }
 
-    // 4) Filter function: id undefined => show all, else show only matching
+    // Filter function: no id => all, else specific
     function filterFeature(id) {
       layer.clearLayers();
-      const feats = id ? data.features.filter(f => f.properties.plot_id === id) : data.features;
+      const feats = id ? data.features.filter(f => f.properties.plot_id === id)
+                       : data.features;
       layer.addData({ type: 'FeatureCollection', features: feats });
       if (feats.length) {
         const temp = L.geoJSON(feats);
@@ -79,7 +93,6 @@
       }
     }
 
-    // Start
     document.addEventListener('DOMContentLoaded', initMap);
   </script>
 </body>

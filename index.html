@@ -33,7 +33,7 @@
 
     // 2) Fetch call.geojson and build map + UI
     function loadData() {
-      fetch('call.geojson')
+      fetch('public/call.geojson')
         .then(res => res.json())
         .then(json => {
           data = json;

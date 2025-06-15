@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demo Traceable Biomass</title>
+  <link 
+    rel="stylesheet" 
+    href="https://unpkg.com/leaflet/dist/leaflet.css" 
+  />
+  <style>
+    body { margin:0; font-family: sans-serif; }
+    #map { height: 80vh; }
+    #controls { padding:10px; background:#f7f7f7; }
+    button { margin-right:5px; padding:5px 10px; }
+  </style>
+</head>
+<body>
+
+  <div id="controls">
+    <button onclick="showAll()">Show All</button>
+    <button onclick="filterPlot('A1')">Plot A1</button>
+    <button onclick="filterPlot('B2')">Plot B2</button>
+  </div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Mock data ฝังในไฟล์
+    const data = {
+      "type":"FeatureCollection",
+      "features":[
+        {"type":"Feature","properties":{"plot_id":"A1","carbon_credit":4.5},"geometry":{"type":"Point","coordinates":[99.4651,19.0773]}},
+        {"type":"Feature","properties":{"plot_id":"B2","carbon_credit":3.2},"geometry":{"type":"Point","coordinates":[100.6,18.35]}}
+      ]
+    };
+
+    // สร้างแผนที่
+    const map = L.map('map').setView([18.3,100.5],6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OSM'}).addTo(map);
+
+    let layer = L.geoJSON(data, {
+      pointToLayer:(f,latlng)=>L.circleMarker(latlng,{radius:6,color:'#00B140'}),
+      onEachFeature:(f,l)=>l.bindPopup(`<b>${f.properties.plot_id}</b><br/>CO₂: ${f.properties.carbon_credit}`)
+    }).addTo(map);
+
+    function showAll(){
+      map.fitBounds(layer.getBounds());
+    }
+    function filterPlot(id){
+      layer.clearLayers();
+      const feat = data.features.filter(f=>f.properties.plot_id===id);
+      layer.addData({type:'FeatureCollection',features:feat});
+      if(feat.length) map.fitBounds(L.geoJSON(feat).getBounds());
+    }
+  </script>
+</body>
+</html>

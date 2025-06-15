@@ -1,89 +1,102 @@
-<!-- Demo: Google Maps Integration with GeoJSON and Search -->
+<!-- Demo: OSM + Leaflet + Nominatim Geocoder (No API Key Required) -->
 <!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Demo Google Maps GeoJSON</title>
+  <title>Demo Interactive Map (OSM + Nominatim)</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- Leaflet Control Geocoder CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <style>
-    /* Basic resets */
-    html, body { height: 100%; margin: 0; padding: 0; }
-    #map { height: 80%; }
-    #controls { height: 20%; padding: 10px; background: #f0f0f0; }
-    #autocomplete { width: 300px; padding: 8px; }
-    button { padding: 8px 12px; margin: 0 5px; }
+    body { margin: 0; font-family: Arial, sans-serif; }
+    #map { height: 80vh; }
+    #controls { padding: 10px; background: #f0f0f0; text-align: center; }
+    #controls button { margin: 0 5px; padding: 8px 12px; }
   </style>
 </head>
 <body>
-  <div id="controls">
-    <input id="autocomplete" type="text" placeholder="ค้นหาสถานที่">
-    <button onclick="fitToAll()">Show All Plots</button>
-  </div>
+  <div id="controls"><!-- Buttons injected here --></div>
   <div id="map"></div>
 
-  <!-- Include the Google Maps JavaScript API with Places library -->
-  <script
-    src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places&language=th"
-    async defer></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <!-- Leaflet Control Geocoder JS (Nominatim) -->
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
   <script>
-    let map;
-    let markers = [];
-    let bounds;
+    let map, layer, data;
 
+    // Initialize map with OSM tiles and geocoder control
     function initMap() {
-      // 1) Initialize the map centered on Thailand
-      map = new google.maps.Map(document.getElementById('map'), {
-        center: { lat: 18.3, lng: 100.5 },
-        zoom: 7,
-        mapTypeId: 'roadmap'
-      });
+      map = L.map('map').setView([18.3, 100.5], 10);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
 
-      // 2) Setup Places Autocomplete for search box
-      const input = document.getElementById('autocomplete');
-      const autocomplete = new google.maps.places.Autocomplete(input);
-      autocomplete.bindTo('bounds', map);
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        if (!place.geometry) return;
-        map.panTo(place.geometry.location);
-        map.setZoom(12);
-      });
+      // Add Nominatim search box
+      L.Control.geocoder({ defaultMarkGeocode: false })
+        .on('markgeocode', function(e) {
+          const bbox = e.geocode.bbox;
+          const poly = L.polygon([bbox.getSouthEast(), bbox.getNorthEast(), bbox.getNorthWest(), bbox.getSouthWest()]);
+          map.fitBounds(poly.getBounds());
+        })
+        .addTo(map);
 
-      // 3) Load GeoJSON data and add markers
+      loadData();
+    }
+
+    // Load GeoJSON and build markers + controls
+    function loadData() {
       fetch('public/call.geojson')
         .then(res => res.json())
-        .then(data => {
-          bounds = new google.maps.LatLngBounds();
-          data.features.forEach(feature => {
-            const coords = feature.geometry.coordinates;
-            const latlng = { lat: coords[1], lng: coords[0] };
-            const marker = new google.maps.Marker({
-              position: latlng,
-              map: map,
-              title: feature.properties.plot_id
-            });
-            // InfoWindow for each marker
-            const infowindow = new google.maps.InfoWindow({
-              content: `<strong>${feature.properties.plot_id}</strong><br>` +
-                       `CO₂: ${feature.properties.carbon_credit} tCO₂`
-            });
-            marker.addListener('click', () => infowindow.open(map, marker));
-            markers.push(marker);
-            bounds.extend(latlng);
-          });
-          // Fit map to markers
-          map.fitBounds(bounds);
+        .then(json => {
+          data = json;
+          layer = L.geoJSON(data, {
+            pointToLayer: (feat, latlng) => L.circleMarker(latlng, { radius: 6, color: '#2a9d8f' }),
+            onEachFeature: (feat, lyr) => {
+              lyr.bindPopup(
+                `<strong>${feat.properties.plot_id}</strong><br>` +
+                `Carbon: ${feat.properties.carbon_credit} tCO₂`
+              );
+            }
+          }).addTo(map);
+          map.fitBounds(layer.getBounds());
+          buildControls();
         })
         .catch(err => console.error('Error loading GeoJSON:', err));
     }
 
-    // Fit map to show all markers
-    function fitToAll() {
-      if (bounds) map.fitBounds(bounds);
+    // Create filter buttons dynamically
+    function buildControls() {
+      const ctrl = document.getElementById('controls');
+      const btnAll = document.createElement('button');
+      btnAll.textContent = 'Show All';
+      btnAll.onclick = () => filterFeature();
+      ctrl.appendChild(btnAll);
+      data.features.forEach(f => {
+        const id = f.properties.plot_id;
+        const btn = document.createElement('button');
+        btn.textContent = id;
+        btn.onclick = () => filterFeature(id);
+        ctrl.appendChild(btn);
+      });
     }
 
-    // Initialize map after API loads
-    window.initMap = initMap;
+    // Filter function: undefined shows all
+    function filterFeature(id) {
+      layer.clearLayers();
+      const feats = id ? data.features.filter(f => f.properties.plot_id === id) : data.features;
+      layer.addData({ type: 'FeatureCollection', features: feats });
+      if (feats.length) {
+        const temp = L.geoJSON(feats);
+        map.fitBounds(temp.getBounds());
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initMap);
   </script>
 </body>
 </html>
+
+<!-- public/call.geojson -->

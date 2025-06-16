@@ -1,13 +1,13 @@
-<!-- Demo: Branded Interactive Map (OSM + Nominatim) with History & PDF -->
+<!-- Demo: OSM + Leaflet + Nominatim Geocoder + History & PDF Certificate -->
 <!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Enable Earth Demo Map</title>
+  <title>Demo Interactive Map with History & PDF</title>
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- Leaflet Control Geocoder CSS -->
+  <!-- Geocoder CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <style>
     :root {
@@ -15,22 +15,22 @@
       --secondary: #E8F4E5;
       --accent: #336633;
     }
-    body {
-      margin: 0;
+    body { 
+      margin: 0; 
       font-family: Arial, sans-serif;
       background: var(--secondary);
       color: #333;
-    }
-    header {
+         }
+    header { 
       background: var(--primary);
       padding: 10px;
-      text-align: center;
+      text-align: center; 
     }
-    header a img {
-      height: 40px;
+    header a img { 
+      height: 40px; 
     }
-    #map {
-      height: 60vh;
+    #map { 
+      height: 60vh; 
     }
     #controls {
       padding: 10px;
@@ -49,7 +49,8 @@
     #controls button:hover {
       background: #295427;
     }
-    #history {
+
+     #history {
       padding: 10px;
       background: #fff;
       border-top: 1px solid #ccc;
@@ -67,26 +68,27 @@
       <img src="public/logo.png" alt="Enable Earth logo">
     </a>
   </header>
-
   <div id="controls"><!-- Buttons injected here --></div>
   <div id="map"></div>
   <div id="history"><p>Select a plot to view history.</p></div>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <!-- Nominatim Geocoder -->
+  <!-- Geocoder JS (Nominatim) -->
   <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-  <!-- jsPDF -->
+  <!-- jsPDF for PDF export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     let map, layer, data;
 
+    // Initialize map with OSM tiles and Nominatim geocoder
     function initMap() {
       map = L.map('map').setView([18.3, 100.5], 10);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(map);
 
+      // Add geocoder search box
       L.Control.geocoder({ defaultMarkGeocode: false })
         .on('markgeocode', function(e) {
           const bbox = e.geocode.bbox;
@@ -98,18 +100,17 @@
       loadData();
     }
 
+    // Load GeoJSON and build markers + controls
     function loadData() {
       fetch('public/call.geojson')
         .then(res => res.json())
         .then(json => {
           data = json;
           layer = L.geoJSON(data, {
-            pointToLayer: (feat, latlng) => L.circleMarker(latlng, { radius: 6, color: var(--accent) }),
+            pointToLayer: (feat, latlng) => L.circleMarker(latlng, { radius: 6, color: '#2a9d8f' }),
             onEachFeature: (feat, lyr) => {
-              lyr.bindPopup(
-                `<strong>${feat.properties.plot_id}</strong><br>` +
-                `Carbon: ${feat.properties.carbon_credit} tCO₂`
-              );
+              lyr.bindPopup(`<strong>${feat.properties.plot_id}</strong><br>` +
+                            `Carbon: ${feat.properties.carbon_credit} tCO₂`);
             }
           }).addTo(map);
           map.fitBounds(layer.getBounds());
@@ -118,13 +119,16 @@
         .catch(err => console.error('Error loading GeoJSON:', err));
     }
 
+    // Create filter buttons dynamically
     function buildControls() {
       const ctrl = document.getElementById('controls');
-      ctrl.innerHTML = '';
+      ctrl.innerHTML = ''; // clear
+      // Show All
       const btnAll = document.createElement('button');
       btnAll.textContent = 'Show All';
       btnAll.onclick = () => { filterFeature(); updateHistory(); };
       ctrl.appendChild(btnAll);
+      // One per plot
       data.features.forEach(f => {
         const id = f.properties.plot_id;
         const btn = document.createElement('button');
@@ -134,9 +138,11 @@
       });
     }
 
+    // Filter function: undefined shows all, else specific
     function filterFeature(id) {
       layer.clearLayers();
-      const feats = id ? data.features.filter(f => f.properties.plot_id === id) : data.features;
+      const feats = id ? data.features.filter(f => f.properties.plot_id === id)
+                       : data.features;
       layer.addData({ type: 'FeatureCollection', features: feats });
       if (feats.length) {
         const temp = L.geoJSON(feats);
@@ -144,12 +150,14 @@
       }
     }
 
+    // Update history panel and export button
     function updateHistory(id) {
       const hist = document.getElementById('history');
       if (!id) {
         hist.innerHTML = '<p>Select a plot to view history.</p>';
         return;
       }
+      // Mock history entries
       const logs = [
         '2023-01-01: Plot registered',
         '2023-03-15: No-burn verified',
@@ -157,11 +165,13 @@
       ];
       let html = `<h3>History for ${id}</h3><ul>`;
       logs.forEach(entry => html += `<li>${entry}</li>`);
-      html += '</ul><button id="exportBtn">Export PDF Certificate</button>';
+      html += '</ul>' +
+              '<button id="exportBtn">Export PDF Certificate</button>';
       hist.innerHTML = html;
       document.getElementById('exportBtn').onclick = () => exportPDF(id, logs);
     }
 
+    // Export PDF using jsPDF
     function exportPDF(id, logs) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();

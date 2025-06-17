@@ -105,7 +105,7 @@
       addBtn(ctrl, 'History Plots', () => { renderLayer(f => f.properties.hasHistory); updateHistory(); });
       addBtn(ctrl, 'Add Plot', () => toggleForm(true));
       // plot-specific buttons
-      data.features.forEach(f => addBtn(ctrl, f.properties.plot_id, () => { renderLayer(x => x.properties.plot_id === f.properties.plot_id); updateHistory(f.properties.plot_id); }));
+      data.features.forEach(f => addBtn(ctrl, f.properties.plot_id, () => { renderLayer(x => x.properties.plot_id === f.properties.plot_id); updateHistory(f.properties.plot_id);routeToPlot(f.geometry.coordinates); }));
     }
 
     function addBtn(parent, text, fn) {

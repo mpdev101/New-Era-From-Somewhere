@@ -25,9 +25,10 @@
     #map { height: 50vh;}
     #history { padding: 10px; background: #fff; border-top: 1px solid #ccc;}
     #history h3 { margin-top: 0; color: var(--primary);}
-    #monitoring { display: none; background: #000; padding: 16px; text-align: center; }
-    #monitoring video { width: 90%; max-width: 600px; margin: 10px auto; display: block; border-radius: 12px;}
-    #monitoring-close { color: #fff; background: #024a18; border: none; padding: 7px 18px; border-radius: 5px; font-size: 1rem; margin-bottom: 6px; cursor:pointer;}
+    .cluster-carbon{font-weight:bold;color:#024a18;}
+    .cluster-label{display:inline-block;background:#024a18;color:#fff;padding:2px 8px;border-radius:8px;font-size:13px;margin-right:6px;}
+    .plot-btns{margin:8px 0;}
+    .plot-btns button{margin:2px 4px 2px 0;padding:4px 8px;font-size:13px;}
   </style>
 </head>
 <body>
@@ -39,11 +40,9 @@
     <button id="btn-history">History Plots</button>
     <button id="btn-addplot">Add Plot</button>
     <button id="btn-routing">Routing</button>
-    <button id="btn-close-route">Close Route</button>
     <button id="btn-monitoring">Monitoring</button>
   </div>
   <div id="plot-buttons"></div>
-
   <div id="add-form-container">
     <form id="add-form">
       <input id="input-id"  placeholder="Plot ID"      required>
@@ -54,24 +53,24 @@
       <button type="button" id="btn-cancel">Cancel</button>
     </form>
   </div>
-
   <div id="map"></div>
   <div id="history"><p>Select a plot to view history.</p></div>
-  <div id="monitoring">
-    <button id="monitoring-close">ปิดวิดีโอ</button>
+  <div id="monitoring" style="display:none;background:#000;padding:16px;text-align:center;">
+    <button id="monitoring-close" style="color:#fff;background:#024a18;border:none;padding:7px 18px;border-radius:5px;font-size:1rem;margin-bottom:6px;cursor:pointer;">ปิดวิดีโอ</button>
     <video id="video-monitor" controls>
       <source src="video-demo.mp4" type="video/mp4">
       Your browser does not support the video tag.
     </video>
   </div>
-
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
   <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
   <script>
   let map, markerCluster, geoLayer, data, routingCtl;
+  let routingActive = false; // For toggle
   let selectedPoints = [];
 
   function initMap() {
@@ -94,7 +93,8 @@
   function drawLayer(filterFn) {
     if(markerCluster) map.removeLayer(markerCluster);
     markerCluster = L.markerClusterGroup();
-    const feats = filterFn ? data.features.filter(filterFn) : data.features;
+    const feats = (filterFn ? data.features.filter(filterFn) : data.features)
+      .filter(f=>f.properties.plot_id !== "Biochar Plant"); // Cluster เฉพาะ Plot ไม่ใช่ Biochar Plant
 
     L.geoJSON(feats, {
       pointToLayer: (f, latlng) => L.marker(latlng),
@@ -115,12 +115,18 @@
     }).addTo(markerCluster);
 
     markerCluster.addTo(map);
+    // Add Biochar Plant Marker
+    const biochar = data.features.find(f=>f.properties.plot_id==="Biochar Plant");
+    if(biochar){
+      L.geoJSON(biochar,{
+        pointToLayer:(f,latlng)=>L.circleMarker(latlng,{radius:10,color:'#1d3757',weight:2,fillColor:'#5e8af7',fillOpacity:.95}),
+        onEachFeature:(f,lyr)=>lyr.bindPopup(`<strong>${f.properties.plot_id}</strong>`)
+      }).addTo(map);
+    }
     if(feats.length) map.fitBounds(markerCluster.getBounds());
-
     markerCluster.on('clusterclick', function (a) {
       map.fitBounds(a.layer.getBounds());
     });
-    // Customize cluster icon: (default is already number of plot in cluster)
   }
 
   function buildPlotButtons() {
@@ -140,10 +146,16 @@
     document.getElementById('btn-history').onclick = () => {
       document.getElementById('plot-buttons').style.display = "block";
     };
-    document.getElementById('btn-close-route').onclick = closeRoute;
+    document.getElementById('btn-routing').onclick = () => {
+      if(routingActive) {
+        closeRoute();
+        routingActive = false;
+      } else {
+        calcBestClusterRoute();
+      }
+    };
     document.getElementById('btn-monitoring').onclick = showMonitoring;
     document.getElementById('monitoring-close').onclick = hideMonitoring;
-    document.getElementById('btn-routing').onclick = showRoutingDialog;
   }
 
   function setupForm() {
@@ -184,44 +196,97 @@
       routeWhileDragging: false,
       fitSelectedRoutes: true
     }).addTo(map);
+    routingActive = true;
   }
 
   function closeRoute() {
     if (routingCtl) { map.removeControl(routingCtl); routingCtl = null; }
+    routingActive = false;
+    showHistory();
   }
 
-  // Simple Routing Dialog (choose all points, route through them)
-  function showRoutingDialog() {
-    // ค้นหา plot ทั้งหมด (ยกเว้น Biochar Plant ถ้ามี)
+  // ---- Cluster + Net Calculation Routing ----
+  async function calcBestClusterRoute() {
     closeRoute();
-    const plots = data.features.filter(f => f.properties.plot_id !== 'Biochar Plant');
-    const start = data.features.find(f => f.properties.plot_id === 'Biochar Plant');
-    if (!start || plots.length < 2) return alert('ไม่พบ Biochar Plant หรือ Plot ไม่พอ');
-
-    // route Biochar Plant -> ทุก plot เรียงตามระยะทาง
-    let waypoints = [L.latLng(start.geometry.coordinates[1], start.geometry.coordinates[0])];
-    plots.forEach(f=>{
-      waypoints.push(L.latLng(f.geometry.coordinates[1], f.geometry.coordinates[0]));
-    });
-
+    routingActive = true;
+    // 1. Cluster เฉพาะ Plot ไม่ใช่ Biochar Plant ในระยะ 10km (DBSCAN)
+    const plots = data.features.filter(f => f.properties.plot_id !== "Biochar Plant");
+    let clusters = [], visited = new Set();
+    const eps = 10; // 10 km
+    for (let i = 0; i < plots.length; i++) {
+      if (visited.has(i)) continue;
+      let cluster = [plots[i]], stack = [i];
+      visited.add(i);
+      while (stack.length) {
+        let idx = stack.pop();
+        for (let j = 0; j < plots.length; j++) {
+          if (visited.has(j)) continue;
+          let dist = turf.distance(
+            turf.point(plots[idx].geometry.coordinates),
+            turf.point(plots[j].geometry.coordinates),
+            { units: 'kilometers' }
+          );
+          if (dist <= eps) {
+            visited.add(j); stack.push(j); cluster.push(plots[j]);
+          }
+        }
+      }
+      clusters.push(cluster);
+    }
+    // 2. คำนวณ Net ของแต่ละ Cluster
+    const biochar = data.features.find(f => f.properties.plot_id === "Biochar Plant");
+    if (!biochar) return alert('ไม่พบ Biochar Plant');
+    let best = null, bestNet = -Infinity, bestResult = null;
+    for (const cluster of clusters) {
+      if(cluster.length<1) continue;
+      // วาด route: Biochar → plot1 → ... → plotN → Biochar (cycle)
+      let waypoints = [biochar, ...cluster, biochar];
+      let latlngs = waypoints.map(f=>L.latLng(f.geometry.coordinates[1], f.geometry.coordinates[0]));
+      // ใช้ Routing API: ขอทางรวม
+      const totalKm = await getRouteDistance(latlngs);
+      const carbonSum = cluster.reduce((s,f)=>(s+Number(f.properties.carbon_credit||0)),0);
+      const net = (carbonSum * 50) - (totalKm * 5);
+      if(net > bestNet) { bestNet = net; best = cluster; bestResult = {carbonSum,totalKm,net,latlngs,plots:cluster}; }
+    }
+    if(!bestResult) return alert('ไม่พบ cluster ที่คำนวณได้');
+    // วาด route จริง
     routingCtl = L.Routing.control({
-      waypoints: waypoints,
+      waypoints: bestResult.latlngs,
       lineOptions: { styles: [{ color: '#0041b6', weight: 5, opacity: .65 }] },
-      createMarker: (i,wp)=> L.marker(wp.latLng).bindPopup(i===0?'Biochar Plant':plots[i-1].properties.plot_id),
+      createMarker: (i,wp)=> L.marker(wp.latLng).bindPopup(i===0||i===bestResult.latlngs.length-1?'Biochar Plant':bestResult.plots[i-1].properties.plot_id),
       addWaypoints: false,
       routeWhileDragging: false,
       fitSelectedRoutes: true
     }).addTo(map);
-
-    // show summary
-    const carbonSum = plots.reduce((s,f)=>(s+Number(f.properties.carbon_credit||0)),0);
+    // Show summary
     document.getElementById('history').innerHTML =
-      `<h3>Route Summary</h3>
+      `<h3>Best Cluster Route</h3>
       <ul>
-        <li>จำนวน Plot: ${plots.length}</li>
-        <li>รวม Carbon: ${carbonSum.toFixed(2)} tCO₂</li>
-        <li>Plot: ${plots.map(f=>f.properties.plot_id).join(', ')}</li>
-      </ul>`;
+        <li>จำนวน Plot ใน Cluster: <span class="cluster-carbon">${bestResult.plots.length}</span></li>
+        <li>รวม Carbon: <span class="cluster-carbon">${bestResult.carbonSum.toFixed(2)}</span> tCO₂</li>
+        <li>ระยะทาง (km): <span class="cluster-carbon">${bestResult.totalKm.toFixed(2)}</span></li>
+        <li>Net (บาท): <span class="cluster-carbon">${bestResult.net.toFixed(2)}</span></li>
+        <li>Plot: ${bestResult.plots.map(f=>f.properties.plot_id).join(', ')}</li>
+      </ul>
+      <small>สูตร: (carbon_sum × 50) - (distance_km × 5)</small>`;
+    map.fitBounds(L.latLngBounds(bestResult.latlngs));
+  }
+
+  // --- Routing API คำนวณระยะรวมแบบวงกลม ---
+  async function getRouteDistance(latlngs){
+    // OSRM route API (open, limited for demo only)
+    // Build waypoints string
+    const coords = latlngs.map(ll=>`${ll.lng},${ll.lat}`).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=false&geometries=geojson`;
+    try {
+      const res = await fetch(url);
+      const json = await res.json();
+      if(json.code==='Ok' && json.routes && json.routes.length>0)
+        return json.routes[0].distance/1000; // meters → km
+      else return turf.length(turf.lineString(latlngs.map(ll=>[ll.lng,ll.lat])),{units:'kilometers'});
+    } catch(e) {
+      return turf.length(turf.lineString(latlngs.map(ll=>[ll.lng,ll.lat])),{units:'kilometers'});
+    }
   }
 
   function showMonitoring() {

@@ -7,6 +7,7 @@
   <title>Enable Earth Demo Map</title>
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css">
   <!-- Nominatim Geocoder CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <style>
@@ -56,12 +57,14 @@
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
   <!-- Nominatim Geocoder -->
   <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
   <!-- jsPDF for PDF export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
-    let map, layer, data;
+    let map, layer, data, routingCtl;
+    let selectedPoints = []; 
 
     function initMap() {
       // initialize map
@@ -72,6 +75,14 @@
         .on('markgeocode', e => map.fitBounds(e.geocode.bbox))
         .addTo(map);
       // load features
+      fetch('call.geojson')
+      .then(r=>r.json())
+      .then(json=>{
+        data={ type:'FeatureCollection',
+               features:json.features.map(f=>({...f,properties:{hasHistory:true,...f.properties}}))};
+      drawLayer();
+      buildControls();
+      setupForm();
       loadData();
     }
 
@@ -87,7 +98,29 @@
         })
         .catch(err => console.error('Error loading GeoJSON:', err));
     }
+ /* ---------- DRAW / REFRESH LAYER ---------- */
+  function drawLayer(filterFn){
+    if(geoLayer) map.removeLayer(geoLayer);
+    const feats = filterFn? data.features.filter(filterFn): data.features;
 
+    geoLayer = L.geoJSON(feats,{
+      pointToLayer:(f,latlng)=>L.circleMarker(latlng,{radius:6,color:getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()}),
+      onEachFeature:(f,lyr)=>{
+        lyr.bindPopup(`<strong>${f.properties.plot_id}</strong><br>CO₂ ${f.properties.carbon_credit}`);
+        // Ctrl+Click  → add to selectedPoints
+        lyr.on('click',e=>{
+          if(!e.originalEvent.ctrlKey) return;
+          selectedPoints.push(e.latlng);
+          if(selectedPoints.length===2){
+            routeBetween(selectedPoints[0],selectedPoints[1]);
+            selectedPoints=[];          // reset
+          }
+        });
+      }
+    }).addTo(map);
+
+    if(feats.length) map.fitBounds(geoLayer.getBounds());
+  }
     function renderLayer(filterFn) {
       // remove old layer
       if (layer) map.removeLayer(layer);
@@ -110,6 +143,7 @@
 
     function addBtn(parent, text, fn) {
       const btn = document.createElement('button'); btn.textContent = text; btn.onclick = fn; parent.appendChild(btn);
+      function addBtn(p,t,fn){ const b=document.createElement('button'); b.textContent=t; b.onclick=fn; p.appendChild(b); }
     }
 
     function setupForm() {
@@ -146,7 +180,18 @@
       doc.setFontSize(12); logs.forEach((l, i) => doc.text(l, 20, 30 + 10 * i));
       doc.save(`certificate_${id}.pdf`);
     }
-
+/* ---------- ROUTING CTRL-CLICK ---------- */
+  function routeBetween(p1,p2){
+    if(routingCtl) map.removeControl(routingCtl);
+    routingCtl = L.Routing.control({
+      waypoints:[p1,p2],
+      lineOptions:{styles:[{color:'blue',opacity:.6,weight:4}]},
+      createMarker:()=>null,
+      addWaypoints:false,
+      routeWhileDragging:false,
+      fitSelectedRoutes:true
+    }).addTo(map);
+  }
     document.addEventListener('DOMContentLoaded', initMap);
   </script>
 </body>

@@ -212,7 +212,7 @@
     // 1. Cluster เฉพาะ Plot ไม่ใช่ Biochar Plant ในระยะ 10km (DBSCAN)
     const plots = data.features.filter(f => f.properties.plot_id !== "Biochar Plant");
     let clusters = [], visited = new Set();
-    const eps = 10; // 10 km
+    const eps = 5; // 10 km
     for (let i = 0; i < plots.length; i++) {
       if (visited.has(i)) continue;
       let cluster = [plots[i]], stack = [i];

@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
   <style>
     :root{--primary:#024a18;--secondary:#E8F4E5;--accent:#336633;}
     body{margin:0;font-family:Arial;background:var(--secondary);}
@@ -50,9 +52,10 @@
   <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
   <script>
     let map, geoLayer, data, routingCtl, clusters = [];
-    let selectedPoints = [];
+    let markerClusterGroup, selectedPoints = [];
 
     function initMap() {
       map = L.map('map').setView([19.2,99.56], 13);
@@ -68,7 +71,7 @@
           data = { type:'FeatureCollection',
             features: json.features.map(f=>({...f,properties:{hasHistory:true,...f.properties}})) };
           clusters = getClusters(data.features);
-          drawLayer();
+          drawClusterLayer();
           buildControls();
           setupForm();
           showClusterInfo();
@@ -103,29 +106,72 @@
       return clusters;
     }
 
-    function drawLayer(filterFn) {
+    function drawClusterLayer(filterFn) {
+      if(markerClusterGroup) map.removeLayer(markerClusterGroup);
       if(geoLayer) map.removeLayer(geoLayer);
-      const feats = filterFn ? data.features.filter(filterFn) : data.features;
-      geoLayer = L.geoJSON(feats, {
-        pointToLayer: (f, latlng) => L.circleMarker(latlng, {radius:8, color:getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(), weight:2, fillOpacity:.9}),
-        onEachFeature: (f,lyr) => {
-          let popup = `<strong>${f.properties.plot_id}</strong><br>Carbon: ${f.properties.carbon_credit||'-'} tCO₂`;
-          // ติด label cluster
-          const clusterIndex = getClusterIndex(f);
-          if(clusterIndex>=0)
-            popup = `<span class="cluster-label">Cluster ${clusterIndex+1}</span><br>` + popup;
-          lyr.bindPopup(popup);
-          lyr.on('click',e=>{
-            if(!e.originalEvent.ctrlKey) return;
-            selectedPoints.push(e.latlng);
-            if(selectedPoints.length===2){
-              manualRoute(selectedPoints[0],selectedPoints[1]);
-              selectedPoints=[];
-            }
-          });
-        }
-      }).addTo(map);
-      if(feats.length) map.fitBounds(geoLayer.getBounds());
+
+      markerClusterGroup = L.markerClusterGroup({
+        showCoverageOnHover:false,
+        spiderfyOnMaxZoom:true,
+        maxClusterRadius:40
+      });
+
+      // Add only non-biochar points to cluster group
+      const feats = (filterFn ? data.features.filter(filterFn) : data.features)
+        .filter(f=>f.properties.plot_id !== "Biochar Plant");
+
+      feats.forEach(f=>{
+        const lat = f.geometry.coordinates[1];
+        const lng = f.geometry.coordinates[0];
+        const clusterIndex = getClusterIndex(f);
+        const marker = L.marker([lat,lng], {
+          title: f.properties.plot_id,
+          icon: L.divIcon({
+            className: 'custom-marker',
+            html: `<div style="background:#336633;color:#fff;padding:3px 7px;border-radius:7px;font-weight:bold;">${f.properties.plot_id}</div>`,
+            iconSize: [32,32], iconAnchor: [16,16]
+          })
+        }).bindPopup(
+          `<span class="cluster-label">Cluster ${clusterIndex+1}</span><br>
+          <strong>${f.properties.plot_id}</strong><br>
+          Carbon: ${f.properties.carbon_credit||'-'} tCO₂`
+        );
+        marker.on('click',e=>{
+          if(!e.originalEvent.ctrlKey) return;
+          selectedPoints.push(e.latlng);
+          if(selectedPoints.length===2){
+            manualRoute(selectedPoints[0],selectedPoints[1]);
+            selectedPoints=[];
+          }
+        });
+        markerClusterGroup.addLayer(marker);
+      });
+
+      // Add Biochar Plant (not clustered)
+      const biochar = data.features.find(f=>f.properties.plot_id==="Biochar Plant");
+      if(biochar){
+        geoLayer = L.geoJSON(biochar,{
+          pointToLayer:(f,latlng)=>L.circleMarker(latlng,{radius:10,color:'#1d3757',weight:2,fillColor:'#5e8af7',fillOpacity:.95}),
+          onEachFeature:(f,lyr)=>lyr.bindPopup(`<strong>${f.properties.plot_id}</strong>`)
+        }).addTo(map);
+      }
+
+      map.addLayer(markerClusterGroup);
+      if(feats.length) map.fitBounds(markerClusterGroup.getBounds());
+
+      markerClusterGroup.on('clusterclick', function (a) {
+        // Zoom into cluster when clicked
+        map.fitBounds(a.layer.getBounds());
+      });
+
+      // Customize cluster icon to show cluster count
+      markerClusterGroup.options.iconCreateFunction = function(cluster){
+        return L.divIcon({
+          html: `<div style="background:#024a18;color:#fff;padding:3px 12px;border-radius:999px;font-weight:bold;font-size:16px;">${cluster.getChildCount()}</div>`,
+          className: 'custom-cluster',
+          iconSize: [38, 38]
+        });
+      };
     }
 
     function getClusterIndex(feature){
@@ -137,8 +183,8 @@
 
     function buildControls() {
       const c = document.getElementById('controls'); c.innerHTML = '';
-      addBtn(c,'Show All',()=>{ drawLayer(); showClusterInfo(); });
-      addBtn(c,'History Plots',()=>{ drawLayer(f=>f.properties.hasHistory); showHistoryPlots(); });
+      addBtn(c,'Show All',()=>{ drawClusterLayer(); showClusterInfo(); });
+      addBtn(c,'History Plots',()=>{ drawClusterLayer(f=>f.properties.hasHistory); showHistoryPlots(); });
       addBtn(c,'Add Plot',()=>toggleForm(true));
       addBtn(c,'Routing',()=>{ routeFromBiocharCluster(); });
     }
@@ -157,7 +203,7 @@
         if(!id||isNaN(lat)||isNaN(lng)||isNaN(car)) return alert('กรุณากรอกให้ครบ');
         data.features.push({ type:'Feature', properties:{plot_id:id, carbon_credit:car, hasHistory:true}, geometry:{type:'Point',coordinates:[lng,lat]} });
         clusters = getClusters(data.features);
-        toggleForm(false); drawLayer(); buildControls(); showClusterInfo();
+        toggleForm(false); drawClusterLayer(); buildControls(); showClusterInfo();
       };
       document.getElementById('btn-cancel').onclick=()=>toggleForm(false);
     }
@@ -170,94 +216,4 @@
           <li>จำนวน Cluster: <span class="cluster-carbon">${clusters.length}</span></li>`;
       clusters.forEach((cluster,i)=>{
         const carbonSum = cluster.reduce((s,f)=>(s+Number(f.properties.carbon_credit||0)),0);
-        html += `<li>Cluster ${i+1}: ${cluster.length} Plot(s), Carbon ${carbonSum.toFixed(2)} tCO₂</li>`;
-      });
-      html += `</ul>`;
-      document.getElementById('history').innerHTML = html;
-    }
-
-    // --- History Plots: ปุ่ม Plot ID + คลิกดูประวัติแต่ละ plot ได้
-    function showHistoryPlots() {
-      let html = `<h3>History Plots</h3><div class="plot-btns">`;
-      data.features.filter(f=>f.properties.hasHistory && f.properties.plot_id !== "Biochar Plant").forEach(f=>{
-        html += `<button onclick="showHistoryPlot('${f.properties.plot_id}')">${f.properties.plot_id}</button>`;
-      });
-      html += `</div><div id="plot-history-detail"><p>เลือก Plot เพื่อดูประวัติ</p></div>`;
-      document.getElementById('history').innerHTML = html;
-    }
-    // ต้องการ global function ให้เรียกได้จากปุ่มใน innerHTML
-    window.showHistoryPlot = function(id) {
-      const f = data.features.find(f=>f.properties.plot_id===id);
-      if(!f) return;
-      const logs=['2023-01-01 Registered','2023-03-15 No-burn','2023-06-20 Certificate'];
-      let html = `<h4>ประวัติ Plot ${id}</h4>
-        <ul>${logs.map(l=>`<li>${l}</li>`).join('')}</ul>
-        <p>Carbon Credit: <b>${f.properties.carbon_credit||'-'}</b> tCO₂</p>
-        <button onclick="exportPDF('${id}')">Export PDF</button>`;
-      document.getElementById('plot-history-detail').innerHTML = html;
-    };
-
-    function exportPDF(id) {
-      const f = data.features.find(f=>f.properties.plot_id===id);
-      const {jsPDF}=window.jspdf;
-      const doc=new jsPDF();
-      doc.setFontSize(16); doc.text(`Certificate for ${id}`,20,20);
-      ['2023-01-01 Registered','2023-03-15 No-burn','2023-06-20 Certificate'].forEach((l,i)=>doc.text(l,20,30+10*i));
-      doc.text(`Carbon Credit: ${(f && f.properties.carbon_credit) || "-"}`, 20, 65);
-      doc.save(`certificate_${id}.pdf`);
-    }
-    window.exportPDF = exportPDF; // เผื่อ export PDF จาก history plot
-
-    // --- Routing จาก Biochar Plant ไปยัง Cluster ที่ใหญ่สุด ---
-    function routeFromBiocharCluster() {
-      // clear previous routing if exists
-      if(routingCtl) { map.removeControl(routingCtl); routingCtl = null; }
-      clusters = getClusters(data.features); // always recalc
-      const biochar = data.features.find(f => f.properties.plot_id === 'Biochar Plant');
-      if (!biochar) return alert('No "Biochar Plant" plot!');
-      if (clusters.length === 0) { showClusterInfo(); return alert('ไม่มี Cluster'); }
-      // หา Cluster ที่ใหญ่สุด
-      let maxCluster = clusters.sort((a,b)=>b.length-a.length)[0];
-      if(!maxCluster||maxCluster.length<1) { showClusterInfo(); return alert('ไม่พบ cluster ที่ใหญ่พอ'); }
-      const waypoints = [biochar, ...maxCluster];
-      routingCtl = L.Routing.control({
-        waypoints: waypoints.map(f=>L.latLng(f.geometry.coordinates[1],f.geometry.coordinates[0])),
-        lineOptions:{styles:[{color:'#0041b6',weight:5,opacity:.65}]},
-        createMarker: (i,wp)=> L.marker(wp.latLng).bindPopup(waypoints[i].properties.plot_id),
-        addWaypoints: false,
-        routeWhileDragging: false,
-        fitSelectedRoutes: true,
-        router: L.Routing.osrmv1({serviceUrl:'https://router.project-osrm.org/route/v1'})
-      }).addTo(map);
-      // Show summary
-      const carbonSum = maxCluster.reduce((s,f)=>(s+Number(f.properties.carbon_credit||0)),0);
-      document.getElementById('history').innerHTML =
-        `<h3>Cluster Route (Cluster ที่ใหญ่สุด)</h3>
-        <ul>
-          <li>จำนวน Plot ใน Cluster: <span class="cluster-carbon">${maxCluster.length}</span></li>
-          <li>รวม Carbon: <span class="cluster-carbon">${carbonSum.toFixed(2)}</span> tCO₂</li>
-          <li>Plot: ${maxCluster.map(f=>f.properties.plot_id).join(', ')}</li>
-        </ul>`;
-      // Zoom
-      const latlngs = waypoints.map(f=>[f.geometry.coordinates[1],f.geometry.coordinates[0]]);
-      map.fitBounds(L.latLngBounds(latlngs));
-    }
-
-    // --- Manual route for Ctrl+Click ---
-    function manualRoute(p1,p2) {
-      if(routingCtl) map.removeControl(routingCtl);
-      routingCtl = L.Routing.control({
-        waypoints:[p1,p2],
-        lineOptions:{styles:[{color:'orange',opacity:.7,weight:4}]},
-        createMarker:()=>null,
-        addWaypoints:false,
-        routeWhileDragging:false,
-        fitSelectedRoutes:true,
-        router: L.Routing.osrmv1({serviceUrl:'https://router.project-osrm.org/route/v1'})
-      }).addTo(map);
-    }
-
-    document.addEventListener('DOMContentLoaded',initMap);
-  </script>
-</body>
-</html>
+       

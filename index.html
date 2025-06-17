@@ -1,158 +1,263 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Enable Earth Demo Map</title>
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css">
   <style>
-    :root { --primary:#024a18; --secondary:#E8F4E5; --accent:#336633; }
-    body { margin: 0; font-family: Arial, sans-serif; background: var(--secondary);}
-    header { background: var(--primary); padding: 10px; text-align: center; }
-    header img { height: 50px; }
-    #controls { background: var(--primary); padding: 10px; text-align: center;}
-    #controls button { margin: 0 5px; padding: 8px 12px; background: var(--accent); color: #fff; border: none; border-radius: 4px; cursor: pointer;}
-    #controls button:hover { background: #295427;}
-    #plot-buttons { display: none; margin-top: 10px; text-align: center;}
-    #plot-buttons button { margin: 0 5px; background: #C8E6C9; color: #024a18; border-radius: 4px; border: none; padding: 6px 10px;}
-    #plot-buttons button.active { background: #024a18; color: #fff;}
-    #add-form-container{ display:none; background:#fff; padding:10px; border-bottom:1px solid #ccc }
-    #add-form input{margin:5px;padding:5px;width:100px;border:1px solid #ccc;border-radius:4px}
-    #map { height: 50vh;}
-    #history { padding: 10px; background: #fff; border-top: 1px solid #ccc;}
-    #history h3 { margin-top: 0; color: var(--primary);}
+    :root{--primary:#024a18;--secondary:#E8F4E5;--accent:#336633;}
+    body{margin:0;font-family:Arial;background:var(--secondary);}
+    header{background:var(--primary);padding:10px;text-align:center;}
+    header img{height:40px;}
+    #controls{background:var(--primary);padding:10px;text-align:center;}
+    #controls button{margin:0 5px;padding:8px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;}
+    #controls button:hover{background:#295427;}
+    #add-form-container{display:none;background:#fff;padding:10px;border-bottom:1px solid #ccc;}
+    #add-form input{margin:5px;padding:5px;width:100px;border:1px solid #ccc;border-radius:4px;}
+    #map{height:50vh;}
+    #history{padding:10px;background:#fff;border-top:1px solid #ccc;}
+    #history h3{margin-top:0;color:var(--primary);}
+    .cluster-carbon{font-weight:bold;color:#024a18;}
+    .cluster-label{display:inline-block;background:#024a18;color:#fff;padding:2px 8px;border-radius:8px;font-size:13px;margin-right:6px;}
+    .plot-btns{margin:8px 0;}
+    .plot-btns button{margin:2px 4px 2px 0;padding:4px 8px;font-size:13px;}
   </style>
 </head>
 <body>
   <header>
-    <a href="https://enableearth.eco" target="_blank"><img src="public/logo.jpg" alt="logo"></a>
+    <a href="https://enableearth.eco" target="_blank"><img src="logo.png" alt="logo"></a>
   </header>
-  <div id="controls">
-    <button id="btn-showall">Show All</button>
-    <button id="btn-history">History Plots</button>
-    <button id="btn-addplot">Add Plot</button>
-  </div>
-  <div id="plot-buttons"></div>
 
-  <!-- Add Plot Form -->
+  <div id="controls"></div>
   <div id="add-form-container">
     <form id="add-form">
-      <input id="input-id"  placeholder="Plot ID"      required>
-      <input id="input-lat" placeholder="Latitude"     type="number" step="any" required>
-      <input id="input-lng" placeholder="Longitude"    type="number" step="any" required>
-      <input id="input-carbon" placeholder="Carbon"    type="number" step="any" required>
+      <input id="input-id" type="text" placeholder="Plot ID" required>
+      <input id="input-lat" type="number" step="any" placeholder="Latitude" required>
+      <input id="input-lng" type="number" step="any" placeholder="Longitude" required>
+      <input id="input-carbon" type="number" step="any" placeholder="Carbon" required>
       <button type="button" id="btn-save">Save</button>
       <button type="button" id="btn-cancel">Cancel</button>
     </form>
   </div>
-
   <div id="map"></div>
   <div id="history"><p>Select a plot to view history.</p></div>
 
-  <!-- JS libs -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
   <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
   <script>
-  let map, markerCluster, geoLayer, data;
-  let selectedPoints = [];
+    let map, geoLayer, data, routingCtl, clusters = [];
+    let selectedPoints = [];
 
-  function initMap() {
-    map = L.map('map').setView([19.46, 99.6], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'&copy; OpenStreetMap contributors' }).addTo(map);
-    L.Control.geocoder({ defaultMarkGeocode: false })
-      .on('markgeocode', e => map.fitBounds(e.geocode.bbox)).addTo(map);
+    function initMap() {
+      map = L.map('map').setView([19.2,99.56], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution:'&copy; OpenStreetMap contributors'
+      }).addTo(map);
+      L.Control.geocoder({defaultMarkGeocode:false})
+        .on('markgeocode', e => map.fitBounds(e.geocode.bbox)).addTo(map);
 
-    fetch('public/call.geojson')
-      .then(r => r.json())
-      .then(json => {
-        data = { type: 'FeatureCollection', features: json.features.map(f => ({ ...f, properties: { hasHistory: true, ...f.properties } })) };
-        drawLayer();
-        buildPlotButtons();
-        setupForm();
-        setupControls();
-      });
-  }
-
-  function drawLayer(filterFn) {
-    if(markerCluster) map.removeLayer(markerCluster);
-    markerCluster = L.markerClusterGroup();
-    const feats = filterFn ? data.features.filter(filterFn) : data.features;
-
-    L.geoJSON(feats, {
-      pointToLayer: (f, latlng) => L.marker(latlng),
-      onEachFeature: (f, lyr) => {
-        lyr.bindPopup(`<strong>${f.properties.plot_id}</strong><br>CO₂ ${f.properties.carbon_credit}`);
-        lyr.on('click', e => {
-          if (e.originalEvent.ctrlKey) {
-            selectedPoints.push(e.latlng);
-            if (selectedPoints.length === 2) {
-              // TODO: add routing here ifต้องการ
-              selectedPoints = [];
-            }
-          } else {
-            showHistory(f.properties.plot_id);
-          }
+      fetch('public/call.geojson')
+        .then(r => r.json())
+        .then(json => {
+          data = { type:'FeatureCollection',
+            features: json.features.map(f=>({...f,properties:{hasHistory:true,...f.properties}})) };
+          clusters = getClusters(data.features);
+          drawLayer();
+          buildControls();
+          setupForm();
+          showClusterInfo();
         });
+    }
+
+    // --- Cluster by distance (DBSCAN-like) ---
+    function getClusters(features, eps=5) {
+      // ไม่เอา Biochar Plant
+      const plots = features.filter(f => f.properties.plot_id !== 'Biochar Plant');
+      let clusters = [], visited=new Set();
+      for (let i=0;i<plots.length;i++) {
+        if (visited.has(i)) continue;
+        let cluster=[plots[i]], stack=[i];
+        visited.add(i);
+        while(stack.length) {
+          let idx=stack.pop();
+          for (let j=0;j<plots.length;j++) {
+            if (visited.has(j)) continue;
+            let dist = turf.distance(
+              turf.point(plots[idx].geometry.coordinates),
+              turf.point(plots[j].geometry.coordinates),
+              {units:'kilometers'}
+            );
+            if(dist<=eps) {
+              visited.add(j); stack.push(j); cluster.push(plots[j]);
+            }
+          }
+        }
+        clusters.push(cluster);
       }
-    }).addTo(markerCluster);
+      return clusters;
+    }
 
-    markerCluster.addTo(map);
-    if(feats.length) map.fitBounds(markerCluster.getBounds());
-  }
+    function drawLayer(filterFn) {
+      if(geoLayer) map.removeLayer(geoLayer);
+      const feats = filterFn ? data.features.filter(filterFn) : data.features;
+      geoLayer = L.geoJSON(feats, {
+        pointToLayer: (f, latlng) => L.circleMarker(latlng, {radius:8, color:getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(), weight:2, fillOpacity:.9}),
+        onEachFeature: (f,lyr) => {
+          let popup = `<strong>${f.properties.plot_id}</strong><br>Carbon: ${f.properties.carbon_credit||'-'} tCO₂`;
+          // ติด label cluster
+          const clusterIndex = getClusterIndex(f);
+          if(clusterIndex>=0)
+            popup = `<span class="cluster-label">Cluster ${clusterIndex+1}</span><br>` + popup;
+          lyr.bindPopup(popup);
+          lyr.on('click',e=>{
+            if(!e.originalEvent.ctrlKey) return;
+            selectedPoints.push(e.latlng);
+            if(selectedPoints.length===2){
+              manualRoute(selectedPoints[0],selectedPoints[1]);
+              selectedPoints=[];
+            }
+          });
+        }
+      }).addTo(map);
+      if(feats.length) map.fitBounds(geoLayer.getBounds());
+    }
 
-  function buildPlotButtons() {
-    const div = document.getElementById('plot-buttons');
-    div.innerHTML = '';
-    data.features.forEach(f => {
-      const btn = document.createElement('button');
-      btn.textContent = f.properties.plot_id;
-      btn.onclick = () => { drawLayer(x => x.properties.plot_id === f.properties.plot_id); showHistory(f.properties.plot_id); };
-      div.appendChild(btn);
-    });
-  }
+    function getClusterIndex(feature){
+      for(let i=0; i<clusters.length; i++)
+        if(clusters[i].some(f=>f.properties.plot_id===feature.properties.plot_id))
+          return i;
+      return -1;
+    }
 
-  function setupControls() {
-    document.getElementById('btn-showall').onclick = () => { drawLayer(); document.getElementById('plot-buttons').style.display = "none"; showHistory(); };
-    document.getElementById('btn-addplot').onclick = () => toggleForm(true);
-    document.getElementById('btn-history').onclick = () => {
-      document.getElementById('plot-buttons').style.display = "block";
+    function buildControls() {
+      const c = document.getElementById('controls'); c.innerHTML = '';
+      addBtn(c,'Show All',()=>{ drawLayer(); showClusterInfo(); });
+      addBtn(c,'History Plots',()=>{ drawLayer(f=>f.properties.hasHistory); showHistoryPlots(); });
+      addBtn(c,'Add Plot',()=>toggleForm(true));
+      addBtn(c,'Routing',()=>{ routeFromBiocharCluster(); });
+    }
+    function addBtn(parent,text,fn) {
+      const b=document.createElement('button');
+      b.textContent=text; b.onclick=fn;
+      parent.appendChild(b);
+    }
+
+    function setupForm() {
+      document.getElementById('btn-save').onclick=()=>{
+        const id  =document.getElementById('input-id').value.trim();
+        const lat =parseFloat(document.getElementById('input-lat').value);
+        const lng =parseFloat(document.getElementById('input-lng').value);
+        const car =parseFloat(document.getElementById('input-carbon').value);
+        if(!id||isNaN(lat)||isNaN(lng)||isNaN(car)) return alert('กรุณากรอกให้ครบ');
+        data.features.push({ type:'Feature', properties:{plot_id:id, carbon_credit:car, hasHistory:true}, geometry:{type:'Point',coordinates:[lng,lat]} });
+        clusters = getClusters(data.features);
+        toggleForm(false); drawLayer(); buildControls(); showClusterInfo();
+      };
+      document.getElementById('btn-cancel').onclick=()=>toggleForm(false);
+    }
+    function toggleForm(show) { document.getElementById('add-form-container').style.display = show?'block':'none'; }
+
+    // --- Cluster info summary ---
+    function showClusterInfo() {
+      let html = `<h3>Cluster Info</h3>
+        <ul>
+          <li>จำนวน Cluster: <span class="cluster-carbon">${clusters.length}</span></li>`;
+      clusters.forEach((cluster,i)=>{
+        const carbonSum = cluster.reduce((s,f)=>(s+Number(f.properties.carbon_credit||0)),0);
+        html += `<li>Cluster ${i+1}: ${cluster.length} Plot(s), Carbon ${carbonSum.toFixed(2)} tCO₂</li>`;
+      });
+      html += `</ul>`;
+      document.getElementById('history').innerHTML = html;
+    }
+
+    // --- History Plots: ปุ่ม Plot ID + คลิกดูประวัติแต่ละ plot ได้
+    function showHistoryPlots() {
+      let html = `<h3>History Plots</h3><div class="plot-btns">`;
+      data.features.filter(f=>f.properties.hasHistory && f.properties.plot_id !== "Biochar Plant").forEach(f=>{
+        html += `<button onclick="showHistoryPlot('${f.properties.plot_id}')">${f.properties.plot_id}</button>`;
+      });
+      html += `</div><div id="plot-history-detail"><p>เลือก Plot เพื่อดูประวัติ</p></div>`;
+      document.getElementById('history').innerHTML = html;
+    }
+    // ต้องการ global function ให้เรียกได้จากปุ่มใน innerHTML
+    window.showHistoryPlot = function(id) {
+      const f = data.features.find(f=>f.properties.plot_id===id);
+      if(!f) return;
+      const logs=['2023-01-01 Registered','2023-03-15 No-burn','2023-06-20 Certificate'];
+      let html = `<h4>ประวัติ Plot ${id}</h4>
+        <ul>${logs.map(l=>`<li>${l}</li>`).join('')}</ul>
+        <p>Carbon Credit: <b>${f.properties.carbon_credit||'-'}</b> tCO₂</p>
+        <button onclick="exportPDF('${id}')">Export PDF</button>`;
+      document.getElementById('plot-history-detail').innerHTML = html;
     };
-  }
 
-  function setupForm() {
-    document.getElementById('btn-save').onclick = () => {
-      const id = document.getElementById('input-id').value.trim();
-      const lat = parseFloat(document.getElementById('input-lat').value);
-      const lng = parseFloat(document.getElementById('input-lng').value);
-      const car = parseFloat(document.getElementById('input-carbon').value);
-      if (!id || isNaN(lat) || isNaN(lng) || isNaN(car)) return alert('กรุณากรอกให้ครบ');
-      data.features.push({ type: 'Feature', properties: { plot_id: id, carbon_credit: car, hasHistory: true }, geometry: { type: 'Point', coordinates: [lng, lat] } });
-      toggleForm(false); drawLayer(); buildPlotButtons(); showHistory(id);
-    };
-    document.getElementById('btn-cancel').onclick = () => toggleForm(false);
-  }
-  function toggleForm(sh) { document.getElementById('add-form-container').style.display = sh ? 'block' : 'none'; }
+    function exportPDF(id) {
+      const f = data.features.find(f=>f.properties.plot_id===id);
+      const {jsPDF}=window.jspdf;
+      const doc=new jsPDF();
+      doc.setFontSize(16); doc.text(`Certificate for ${id}`,20,20);
+      ['2023-01-01 Registered','2023-03-15 No-burn','2023-06-20 Certificate'].forEach((l,i)=>doc.text(l,20,30+10*i));
+      doc.text(`Carbon Credit: ${(f && f.properties.carbon_credit) || "-"}`, 20, 65);
+      doc.save(`certificate_${id}.pdf`);
+    }
+    window.exportPDF = exportPDF; // เผื่อ export PDF จาก history plot
 
-  function showHistory(id) {
-    const h = document.getElementById('history');
-    if (!id) { h.innerHTML = '<p>Select a plot to view history.</p>'; return; }
-    const logs = ['2023-01-01 Registered','2023-03-15 No-burn','2023-06-20 Certificate'];
-    h.innerHTML = `<h3>History for ${id}</h3><ul>${logs.map(l=>`<li>${l}</li>`).join('')}</ul>
-      <button onclick="exportPDF('${id}')">Export PDF</button>`;
-  }
-  function exportPDF(id) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF(); doc.setFontSize(16); doc.text(`Certificate for ${id}`,20,20);
-    ['2023-01-01','2023-03-15','2023-06-20'].forEach((l,i)=>doc.text(l,20,30+10*i));
-    doc.save(`certificate_${id}.pdf`);
-  }
-  document.addEventListener('DOMContentLoaded', initMap);
+    // --- Routing จาก Biochar Plant ไปยัง Cluster ที่ใหญ่สุด ---
+    function routeFromBiocharCluster() {
+      // clear previous routing if exists
+      if(routingCtl) { map.removeControl(routingCtl); routingCtl = null; }
+      clusters = getClusters(data.features); // always recalc
+      const biochar = data.features.find(f => f.properties.plot_id === 'Biochar Plant');
+      if (!biochar) return alert('No "Biochar Plant" plot!');
+      if (clusters.length === 0) { showClusterInfo(); return alert('ไม่มี Cluster'); }
+      // หา Cluster ที่ใหญ่สุด
+      let maxCluster = clusters.sort((a,b)=>b.length-a.length)[0];
+      if(!maxCluster||maxCluster.length<1) { showClusterInfo(); return alert('ไม่พบ cluster ที่ใหญ่พอ'); }
+      const waypoints = [biochar, ...maxCluster];
+      routingCtl = L.Routing.control({
+        waypoints: waypoints.map(f=>L.latLng(f.geometry.coordinates[1],f.geometry.coordinates[0])),
+        lineOptions:{styles:[{color:'#0041b6',weight:5,opacity:.65}]},
+        createMarker: (i,wp)=> L.marker(wp.latLng).bindPopup(waypoints[i].properties.plot_id),
+        addWaypoints: false,
+        routeWhileDragging: false,
+        fitSelectedRoutes: true,
+        router: L.Routing.osrmv1({serviceUrl:'https://router.project-osrm.org/route/v1'})
+      }).addTo(map);
+      // Show summary
+      const carbonSum = maxCluster.reduce((s,f)=>(s+Number(f.properties.carbon_credit||0)),0);
+      document.getElementById('history').innerHTML =
+        `<h3>Cluster Route (Cluster ที่ใหญ่สุด)</h3>
+        <ul>
+          <li>จำนวน Plot ใน Cluster: <span class="cluster-carbon">${maxCluster.length}</span></li>
+          <li>รวม Carbon: <span class="cluster-carbon">${carbonSum.toFixed(2)}</span> tCO₂</li>
+          <li>Plot: ${maxCluster.map(f=>f.properties.plot_id).join(', ')}</li>
+        </ul>`;
+      // Zoom
+      const latlngs = waypoints.map(f=>[f.geometry.coordinates[1],f.geometry.coordinates[0]]);
+      map.fitBounds(L.latLngBounds(latlngs));
+    }
+
+    // --- Manual route for Ctrl+Click ---
+    function manualRoute(p1,p2) {
+      if(routingCtl) map.removeControl(routingCtl);
+      routingCtl = L.Routing.control({
+        waypoints:[p1,p2],
+        lineOptions:{styles:[{color:'orange',opacity:.7,weight:4}]},
+        createMarker:()=>null,
+        addWaypoints:false,
+        routeWhileDragging:false,
+        fitSelectedRoutes:true,
+        router: L.Routing.osrmv1({serviceUrl:'https://router.project-osrm.org/route/v1'})
+      }).addTo(map);
+    }
+
+    document.addEventListener('DOMContentLoaded',initMap);
   </script>
 </body>
 </html>

@@ -1,47 +1,41 @@
-<!-- index.html - Enable Earth Map Demo (with Cluster & Routing) -->
+<!-- Enable-Earth Interactive Map: Cluster + Routing 5km -->
 <!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Enable Earth Demo Map</title>
-  <!-- Leaflet & Plugins -->
+  <!-- CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css">
   <style>
-    :root {
-      --primary:#024a18; --secondary:#E8F4E5; --accent:#336633;
-    }
-    body { margin:0; font-family:Arial, sans-serif; background:var(--secondary);}
-    header { background:var(--primary); padding:10px; text-align:center; }
-    header img { height:50px; }
-    #controls { background:var(--primary); padding:10px; text-align:center; }
-    #controls button { margin:0 4px 4px 0; padding:8px 16px; background:var(--accent); color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:15px;}
-    #controls button:hover { background:#295427;}
-    #map { height: 54vh; }
-    #history { background:#fff; border-top:1px solid #ccc; min-height:90px; padding:16px; }
-    #history h3 { margin:0; color:var(--primary);}
-    .cluster-carbon { color:#024a18; font-weight:bold;}
+    :root{--primary:#024a18;--secondary:#E8F4E5;--accent:#336633;}
+    body{margin:0;font-family:Arial;background:var(--secondary);}
+    header{background:var(--primary);padding:10px;text-align:center;}
+    header img{height:50px;}
+    #controls{background:var(--primary);padding:10px;text-align:center;}
+    #controls button{margin:0 5px;padding:8px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;}
+    #controls button:hover{background:#295427;}
+    #add-form-container{display:none;background:#fff;padding:10px;border-bottom:1px solid #ccc;}
+    #add-form input{margin:5px;padding:5px;width:100px;border:1px solid #ccc;border-radius:4px;}
+    #map{height:50vh;}
+    #history{padding:10px;background:#fff;border-top:1px solid #ccc;}
+    #history h3{margin-top:0;color:var(--primary);}
+    .cluster-carbon{font-weight:bold;color:#024a18;}
   </style>
 </head>
 <body>
   <header>
-    <a href="https://enableearth.eco/" target="_blank">
-      <img src= "public/logo.jpg" alt="Enable Earth logo">
-    </a>
+    <a href="https://enableearth.eco" target="_blank"><img src="public/logo.jpg" alt="logo"></a>
   </header>
-  <div id="controls">
-    <button id="btn-showall">Show All</button>
-    <button id="btn-history">History Plots</button>
-    <button id="btn-addplot">Add Plot</button>
-    <button id="btn-routing">Routing (Biochar→Cluster)</button>
-  </div>
-  <div id="add-form-container" style="display:none;background:#fff;padding:10px;border-bottom:1px solid #ccc;">
+
+  <div id="controls"></div>
+
+  <!-- Add Plot Form -->
+  <div id="add-form-container">
     <form id="add-form">
-      <input id="input-id" placeholder="Plot ID" required>
+      <input id="input-id" type="text" placeholder="Plot ID" required>
       <input id="input-lat" type="number" step="any" placeholder="Latitude" required>
       <input id="input-lng" type="number" step="any" placeholder="Longitude" required>
       <input id="input-carbon" type="number" step="any" placeholder="Carbon" required>
@@ -49,177 +43,175 @@
       <button type="button" id="btn-cancel">Cancel</button>
     </form>
   </div>
+
   <div id="map"></div>
   <div id="history"><p>Select a plot to view history.</p></div>
 
-  <!-- JS Libs -->
+  <!-- JS libs -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
   <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+  <!-- Turf.js for spatial calculations -->
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
   <script>
-  let map, data, clusterLayer, routingCtl, plotLayer, controlsGenerated = false;
+    let map, geoLayer, data, routingCtl;
+    let selectedPoints = [];
 
-  // ========== MAP INIT ==========
-  function initMap() {
-    map = L.map('map').setView([19.19, 99.56], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(map);
-    L.Control.geocoder({ defaultMarkGeocode:false }).on('markgeocode', e=>map.fitBounds(e.geocode.bbox)).addTo(map);
+    function initMap() {
+      map = L.map('map').setView([19.2,99.56], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution:'&copy; OpenStreetMap contributors'
+      }).addTo(map);
+      L.Control.geocoder({defaultMarkGeocode:false})
+        .on('markgeocode', e => map.fitBounds(e.geocode.bbox)).addTo(map);
 
-    fetch('public/call.geojson')
-      .then(r=>r.json())
-      .then(json=>{
-        data = json;
-        renderCluster();
-        setupControls();
-        setupAddPlotForm();
-      });
-  }
+      fetch('public/call.geojson')
+        .then(r => r.json())
+        .then(json => {
+          data = { type:'FeatureCollection',
+            features: json.features.map(f=>({...f,properties:{hasHistory:true,...f.properties}})) };
+          drawLayer();
+          buildControls();
+          setupForm();
+        });
+    }
 
-  // ========== RENDER MARKER CLUSTER ==========
-  function renderCluster(filterFn) {
-    if (clusterLayer) map.removeLayer(clusterLayer);
-    if (plotLayer) map.removeLayer(plotLayer);
-    let feats = filterFn ? data.features.filter(filterFn) : data.features;
-    clusterLayer = L.markerClusterGroup();
-    plotLayer = L.geoJSON(feats, {
-      pointToLayer: (f, latlng) => L.marker(latlng, {title: f.properties.plot_id}),
-      onEachFeature: (f, lyr) => {
-        lyr.bindPopup(`<b>${f.properties.plot_id}</b>` + 
-          (f.properties.carbon_credit ? `<br>Carbon: ${f.properties.carbon_credit} tCO₂` : ''));
-        lyr.on('click', ()=>showHistory(f.properties.plot_id));
+    function drawLayer(filterFn) {
+      if(geoLayer) map.removeLayer(geoLayer);
+      const feats = filterFn ? data.features.filter(filterFn) : data.features;
+      geoLayer = L.geoJSON(feats, {
+        pointToLayer: (f, latlng) => L.circleMarker(latlng, {radius:8, color:getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(), weight:2, fillOpacity:.9}),
+        onEachFeature: (f,lyr) => {
+          lyr.bindPopup(`<strong>${f.properties.plot_id}</strong><br>Carbon: ${f.properties.carbon_credit||'-'} tCO₂`);
+          // Ctrl+Click: Select for manual routing
+          lyr.on('click',e=>{
+            if(!e.originalEvent.ctrlKey) return;
+            selectedPoints.push(e.latlng);
+            if(selectedPoints.length===2){
+              manualRoute(selectedPoints[0],selectedPoints[1]);
+              selectedPoints=[];
+            }
+          });
+        }
+      }).addTo(map);
+      if(feats.length) map.fitBounds(geoLayer.getBounds());
+    }
+
+    function buildControls() {
+      const c = document.getElementById('controls'); c.innerHTML = '';
+      addBtn(c,'Show All',()=>{ drawLayer(); showHistory(); });
+      addBtn(c,'History Plots',()=>{ drawLayer(f=>f.properties.hasHistory); showHistory(); });
+      addBtn(c,'Add Plot',()=>toggleForm(true));
+      addBtn(c,'Routing',routeFromBiocharCluster);
+    }
+    function addBtn(parent,text,fn) {
+      const b=document.createElement('button');
+      b.textContent=text; b.onclick=fn;
+      parent.appendChild(b);
+    }
+
+    function setupForm() {
+      document.getElementById('btn-save').onclick=()=>{
+        const id  =document.getElementById('input-id').value.trim();
+        const lat =parseFloat(document.getElementById('input-lat').value);
+        const lng =parseFloat(document.getElementById('input-lng').value);
+        const car =parseFloat(document.getElementById('input-carbon').value);
+        if(!id||isNaN(lat)||isNaN(lng)||isNaN(car)) return alert('กรุณากรอกให้ครบ');
+        data.features.push({ type:'Feature', properties:{plot_id:id, carbon_credit:car, hasHistory:true}, geometry:{type:'Point',coordinates:[lng,lat]} });
+        toggleForm(false); drawLayer(); buildControls(); showHistory(id);
+      };
+      document.getElementById('btn-cancel').onclick=()=>toggleForm(false);
+    }
+    function toggleForm(show) { document.getElementById('add-form-container').style.display = show?'block':'none'; }
+
+    function showHistory(id) {
+      const h=document.getElementById('history');
+      if(!id){ h.innerHTML='<p>Select a plot to view history.</p>'; return; }
+      const logs=['2023-01-01 Registered','2023-03-15 No-burn','2023-06-20 Certificate'];
+      h.innerHTML=`<h3>History for ${id}</h3><ul>${logs.map(l=>`<li>${l}</li>`).join('')}</ul>
+        <button onclick="exportPDF('${id}')">Export PDF</button>`;
+    }
+    function exportPDF(id) {
+      const {jsPDF}=window.jspdf;
+      const doc=new jsPDF();
+      doc.setFontSize(16); doc.text(`Certificate for ${id}`,20,20);
+      ['2023-01-01 Registered','2023-03-15 No-burn','2023-06-20 Certificate'].forEach((l,i)=>doc.text(l,20,30+10*i));
+      doc.save(`certificate_${id}.pdf`);
+    }
+
+    // --------- Routing: Cluster by distance (5km) ---------
+    function routeFromBiocharCluster() {
+      // 1. แยก Biochar Plant ออก
+      const biochar = data.features.find(f => f.properties.plot_id === 'Biochar Plant');
+      if (!biochar) return alert('No "Biochar Plant" plot!');
+      const plots = data.features.filter(f => f.properties.plot_id !== 'Biochar Plant');
+      if (plots.length < 2) return alert('น้อยกว่า 2 Plot');
+      // 2. Cluster: ทุกจุดในกลุ่มห่างกัน ≤5km (DBSCAN-like)
+      let clusters=[], visited=new Set();
+      for (let i=0;i<plots.length;i++) {
+        if (visited.has(i)) continue;
+        let cluster=[plots[i]], stack=[i];
+        visited.add(i);
+        while(stack.length) {
+          let idx=stack.pop();
+          for (let j=0;j<plots.length;j++) {
+            if (visited.has(j)) continue;
+            let dist = turf.distance(
+              turf.point(plots[idx].geometry.coordinates),
+              turf.point(plots[j].geometry.coordinates),
+              {units:'kilometers'}
+            );
+            if(dist<=5) {
+              visited.add(j); stack.push(j); cluster.push(plots[j]);
+            }
+          }
+        }
+        clusters.push(cluster);
       }
-    });
-    clusterLayer.addLayer(plotLayer);
-    map.addLayer(clusterLayer);
-    if (feats.length) map.fitBounds(clusterLayer.getBounds());
-  }
+      let maxCluster = clusters.sort((a,b)=>b.length-a.length)[0];
+      if(!maxCluster||maxCluster.length<2) return alert('ไม่พบ cluster ที่ใหญ่กว่า 2 จุดใน 5km');
+      // 3. Routing: Biochar Plant → ...Cluster
+      const waypoints = [biochar, ...maxCluster];
+      if(routingCtl) map.removeControl(routingCtl);
+      routingCtl = L.Routing.control({
+        waypoints: waypoints.map(f=>L.latLng(f.geometry.coordinates[1],f.geometry.coordinates[0])),
+        lineOptions:{styles:[{color:'#0041b6',weight:5,opacity:.65}]},
+        createMarker: (i,wp)=> L.marker(wp.latLng).bindPopup(waypoints[i].properties.plot_id),
+        addWaypoints: false,
+        routeWhileDragging: false,
+        fitSelectedRoutes: true,
+        router: L.Routing.osrmv1({serviceUrl:'https://router.project-osrm.org/route/v1'})
+      }).addTo(map);
+      // 4. Show summary
+      const carbonSum = maxCluster.reduce((s,f)=>(s+Number(f.properties.carbon_credit||0)),0);
+      document.getElementById('history').innerHTML =
+        `<h3>Cluster Route</h3>
+        <ul>
+          <li>จำนวน Plot ใน Cluster: <span class="cluster-carbon">${maxCluster.length}</span></li>
+          <li>รวม Carbon: <span class="cluster-carbon">${carbonSum.toFixed(2)}</span> tCO₂</li>
+          <li>Plot: ${maxCluster.map(f=>f.properties.plot_id).join(', ')}</li>
+        </ul>`;
+      // Zoom to
+      const latlngs = waypoints.map(f=>[f.geometry.coordinates[1],f.geometry.coordinates[0]]);
+      map.fitBounds(L.latLngBounds(latlngs));
+    }
 
-  // ========== CONTROL BAR ==========
-  function setupControls() {
-    if (controlsGenerated) return;
-    controlsGenerated = true;
-    document.getElementById('btn-showall').onclick = ()=>{ renderCluster(); showHistory(); };
-    document.getElementById('btn-history').onclick = ()=>showHistoryPlots();
-    document.getElementById('btn-addplot').onclick = ()=>toggleAddForm(true);
-    document.getElementById('btn-routing').onclick = ()=>routeFromBiocharCluster();
-  }
+    // --- Manual route for Ctrl+Click ---
+    function manualRoute(p1,p2) {
+      if(routingCtl) map.removeControl(routingCtl);
+      routingCtl = L.Routing.control({
+        waypoints:[p1,p2],
+        lineOptions:{styles:[{color:'orange',opacity:.7,weight:4}]},
+        createMarker:()=>null,
+        addWaypoints:false,
+        routeWhileDragging:false,
+        fitSelectedRoutes:true,
+        router: L.Routing.osrmv1({serviceUrl:'https://router.project-osrm.org/route/v1'})
+      }).addTo(map);
+    }
 
-  // ========== HISTORY ==========
-  function showHistory(plot_id) {
-    const h = document.getElementById('history');
-    if (!plot_id) return h.innerHTML = '<p>Select a plot to view history.</p>';
-    // Mock logs
-    const logs = [
-      '2023-01-01: Registered',
-      '2023-03-15: No-burn verified',
-      '2023-06-20: Certificate issued'
-    ];
-    h.innerHTML = `<h3>History for ${plot_id}</h3><ul>${logs.map(l=>`<li>${l}</li>`).join('')}</ul>
-      <button onclick="exportPDF('${plot_id}')">Export PDF</button>`;
-  }
-
-  // Show all plots as buttons (History Plots)
-  function showHistoryPlots() {
-    const h = document.getElementById('history');
-    h.innerHTML = `<div id="plot-btn-group" style="margin-bottom:8px;"></div><div id="plot-hist-box"></div>`;
-    const group = document.getElementById('plot-btn-group');
-    data.features.forEach(f=>{
-      if (f.properties.plot_id!=='Biochar Plant') {
-        const b = document.createElement('button');
-        b.textContent = f.properties.plot_id;
-        b.style = "margin:3px;padding:7px 13px;background:#297a53;border:none;border-radius:3px;color:#fff;cursor:pointer;font-size:13px;";
-        b.onclick = ()=>showHistoryPlotDetail(f);
-        group.appendChild(b);
-      }
-    });
-  }
-
-  function showHistoryPlotDetail(f) {
-    const box = document.getElementById('plot-hist-box');
-    const logs = [
-      '2023-01-01: Registered',
-      '2023-03-15: No-burn verified',
-      '2023-06-20: Certificate issued'
-    ];
-    box.innerHTML = `<h3>History for ${f.properties.plot_id}</h3><ul>${logs.map(l=>`<li>${l}</li>`).join('')}</ul>
-      <button onclick="exportPDF('${f.properties.plot_id}')">Export PDF</button>`;
-  }
-
-  // ========== PDF EXPORT ==========
-  function exportPDF(id) {
-    const {jsPDF} = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFontSize(16); doc.text(`Certificate for ${id}`, 20, 20);
-    ['2023-01-01: Registered','2023-03-15: No-burn verified','2023-06-20: Certificate issued']
-      .forEach((l, i)=>doc.text(l, 20, 35 + 10*i));
-    doc.save(`certificate_${id}.pdf`);
-  }
-
-  // ========== ADD PLOT ==========
-  function setupAddPlotForm() {
-    document.getElementById('btn-save').onclick = ()=>{
-      const id = document.getElementById('input-id').value.trim();
-      const lat = parseFloat(document.getElementById('input-lat').value);
-      const lng = parseFloat(document.getElementById('input-lng').value);
-      const car = parseFloat(document.getElementById('input-carbon').value);
-      if (!id || isNaN(lat) || isNaN(lng) || isNaN(car)) return alert('กรุณากรอกข้อมูลให้ครบ');
-      data.features.push({type:'Feature',properties:{plot_id:id,carbon_credit:car},geometry:{type:'Point',coordinates:[lng,lat]}});
-      toggleAddForm(false); renderCluster(); showHistory(id);
-    };
-    document.getElementById('btn-cancel').onclick = ()=>toggleAddForm(false);
-  }
-  function toggleAddForm(show) {
-    document.getElementById('add-form-container').style.display = show ? 'block' : 'none';
-  }
-
-  // ========== CLUSTER-BASED ROUTING ==========
-  function routeFromBiocharCluster() {
-    // 1. Find Biochar Plant
-    const biochar = data.features.find(f => f.properties.plot_id === 'Biochar Plant');
-    if (!biochar) return alert('No "Biochar Plant" plot!');
-    const biocharPt = turf.point(biochar.geometry.coordinates);
-    // 2. Find plots within 5km
-    const plots = data.features.filter(f => f.properties.plot_id !== 'Biochar Plant');
-    const closePlots = plots.filter(f => 
-      turf.distance(biocharPt, turf.point(f.geometry.coordinates), {units:'kilometers'}) <= 5
-    );
-    if (closePlots.length < 1) return alert('ไม่พบ plot ที่อยู่ในรัศมี 5km');
-    // 3. Sort by distance from Biochar Plant (simple route)
-    const waypoints = [biochar, ...closePlots.sort((a, b) => {
-      const da = turf.distance(biocharPt, turf.point(a.geometry.coordinates), {units:'kilometers'});
-      const db = turf.distance(biocharPt, turf.point(b.geometry.coordinates), {units:'kilometers'});
-      return da-db;
-    })];
-    // 4. Routing
-    if (routingCtl) map.removeControl(routingCtl);
-    routingCtl = L.Routing.control({
-      waypoints: waypoints.map(f=>L.latLng(f.geometry.coordinates[1], f.geometry.coordinates[0])),
-      lineOptions:{styles:[{color:'#0041b6',weight:5,opacity:.65}]},
-      createMarker: (i,wp)=> L.marker(wp.latLng).bindPopup(waypoints[i].properties.plot_id),
-      addWaypoints: false,
-      routeWhileDragging: false,
-      fitSelectedRoutes: true,
-      router: L.Routing.osrmv1({serviceUrl:'https://router.project-osrm.org/route/v1'})
-    }).addTo(map);
-    // 5. Show summary
-    const carbonSum = closePlots.reduce((s,f)=>(s+Number(f.properties.carbon_credit||0)),0);
-    document.getElementById('history').innerHTML =
-      `<h3>Cluster Route from Biochar Plant</h3>
-       <ul>
-         <li>จำนวน Plot ใน Cluster: <span class="cluster-carbon">${closePlots.length}</span></li>
-         <li>รวม Carbon: <span class="cluster-carbon">${carbonSum.toFixed(2)}</span> tCO₂</li>
-         <li>Plot: ${closePlots.map(f=>f.properties.plot_id).join(', ')}</li>
-       </ul>`;
-    // Zoom to cluster
-    const latlngs = waypoints.map(f=>[f.geometry.coordinates[1],f.geometry.coordinates[0]]);
-    map.fitBounds(L.latLngBounds(latlngs));
-  }
-
-  // ========== INIT ==========
-  document.addEventListener('DOMContentLoaded', initMap);
+    document.addEventListener('DOMContentLoaded',initMap);
   </script>
 </body>
 </html>

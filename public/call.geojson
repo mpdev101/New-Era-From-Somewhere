@@ -4,7 +4,7 @@
     {
       "type": "Feature",
       "properties": {"plot_id": "A1", "dry_mass_ton": 2.5, "carbon_credit": 4.5},
-      "geometry": {"type": "Point", "coordinates": [100.5, 18.3]}
+      "geometry": {"type": "Point", "coordinates": [99.465487, 19.077879]}
     },
     {
       "type": "Feature",

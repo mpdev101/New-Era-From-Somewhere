@@ -1,7 +1,7 @@
 {
   "type": "FeatureCollection",
   "features": [
-    {"type":"Feature","properties":{"plot_id":"Biochar Plant",},"geometry":{"type":"Point","coordinates":[99.4907820,19.2295600]}}
+    {"type":"Feature","properties":{"plot_id":"Biochar Plant"},"geometry":{"type":"Point","coordinates":[99.4907820,19.2295600]}}
     {"type":"Feature","properties":{"plot_id":"MJD001","carbon_credit":4.1},"geometry":{"type":"Point","coordinates":[99.56857,19.18492]}},
     {"type":"Feature","properties":{"plot_id":"MJD002","carbon_credit":3.9},"geometry":{"type":"Point","coordinates":[99.56974,19.18308]}},
     {"type":"Feature","properties":{"plot_id":"MJD003","carbon_credit":4.4},"geometry":{"type":"Point","coordinates":[99.56686,19.18147]}},

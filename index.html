@@ -145,11 +145,10 @@
     document.getElementById('btn-showall').onclick = () => { drawLayer(); document.getElementById('plot-buttons').style.display = "none"; showHistory(); };
     document.getElementById('btn-addplot').onclick = () => toggleForm(true);
     document.getElementById('btn-history').onclick = () => {
-      document.getElementById('plot-buttons').style.display = "block";
-      const biochar = document.getElementById('history');
-      if (id == "Biochar Plant") {biochar.style.display = "block";}};
-
+    document.getElementById('btn-history').onclick = () => {
+    document.getElementById('plot-buttons').style.display = "block";
     };
+
     document.getElementById('btn-routing').onclick = () => {
       if(routingActive) {
         closeRoute();

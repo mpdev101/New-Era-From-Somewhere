@@ -176,14 +176,14 @@
   function showHistory(id) {
     const h = document.getElementById('history');
     if (!id) { h.innerHTML = '<p>Select a plot to view history.</p>'; return; }
-    const logs = ['2023-01-01 Registered','2023-03-15 No-burn','2023-06-20 Certificate'];
+    const logs = ['2023-01-01 Registered','2023-03-15 No-burn','2025-06-20 Certificate'];
     h.innerHTML = `<h3>History for ${id}</h3><ul>${logs.map(l=>`<li>${l}</li>`).join('')}</ul>
       <button onclick="exportPDF('${id}')">Export PDF</button>`;
   }
   function exportPDF(id) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF(); doc.setFontSize(16); doc.text(`Certificate for ${id}`,20,20);
-    ['2023-01-01','2023-03-15','2023-06-20'].forEach((l,i)=>doc.text(l,20,30+10*i));
+    ['2023-01-01','2023-03-15','2025-06-20'].forEach((l,i)=>doc.text(l,20,30+10*i));
     doc.save(`certificate_${id}.pdf`);
   }
 
@@ -263,11 +263,11 @@
     document.getElementById('history').innerHTML =
       `<h3>Best Cluster Route</h3>
       <ul>
-        <li>จำนวน Plot ใน Cluster: <span class="cluster-carbon">${bestResult.plots.length}</span></li>
-        <li>รวม Residues(ton): <span class="cluster-carbon">${bestResult.carbonSum.toFixed(2)}</span> tCO₂</li>
-        <li>ระยะทาง (km): <span class="cluster-carbon">${bestResult.totalKm.toFixed(2)}</span></li>
+        <li>Number of Plots in Cluster: <span class="cluster-carbon">${bestResult.plots.length}</span></li>
+        <li>Total Residues(ton): <span class="cluster-carbon">${bestResult.carbonSum.toFixed(2)}</span> tCO₂</li>
+        <li>Distance(km): <span class="cluster-carbon">${bestResult.totalKm.toFixed(2)}</span></li>
      <!--  <li>Net (บาท): // <span class="cluster-carbon">${bestResult.net.toFixed(2)}</span></li>  --> 
-        <li>Plot: ${bestResult.plots.map(f=>f.properties.plot_id).join(', ')}</li>
+        <li>Plots: ${bestResult.plots.map(f=>f.properties.plot_id).join(', ')}</li>
       </ul>
        <!--  <small>สูตร:(carbon_sum × 50) - (distance_km × 5)</small> --> `;  
     map.fitBounds(L.latLngBounds(bestResult.latlngs));

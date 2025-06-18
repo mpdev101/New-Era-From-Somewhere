@@ -174,8 +174,9 @@
   function toggleForm(sh) { document.getElementById('add-form-container').style.display = sh ? 'block' : 'none'; }
 
   function showHistory(id) {
-    const h = document.getElementById('history')!== "Biochar Plant";
+    const h = document.getElementById('history');
     if (!id) { h.innerHTML = '<p>Select a plot to view history.</p>'; return; }
+    if (id == "Biochar Plant") { h.innerHTML = '<p>Select a plot to view history.</p>'; return; }
     const logs = ['2023-01-01 Registered','2023-03-15 No-burn','2025-06-20 Certificate'];
     h.innerHTML = `<h3>History for ${id}</h3><ul>${logs.map(l=>`<li>${l}</li>`).join('')}</ul>
       <button onclick="exportPDF('${id}')">Export PDF</button>`;

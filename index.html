@@ -75,6 +75,7 @@
   let selectedPoints = [];
   let hubMarker = null;
   let hubPolylines = [];
+  let mainRoadMarker = null;
 
   function initMap() {
     map = L.map('map').setView([19.2, 99.56], 13);
@@ -212,7 +213,7 @@
     clearHubAndLines();
   }
 
-  // ---- Cluster + Net Calculation Routing + Hub ----
+  // ---- Cluster + Net Calculation Routing + Hub + MainRoad ----
   async function calcBestClusterRoute() {
     closeRoute();
     routingActive = true;
@@ -256,30 +257,17 @@
       if(net > bestNet) { bestNet = net; best = cluster; bestResult = {carbonSum,totalKm,net,latlngs,plots:cluster}; }
     }
     if(!bestResult) return alert('ไม่พบ cluster ที่คำนวณได้');
-    // วาด route จริง
-    routingCtl = L.Routing.control({
-      waypoints: bestResult.latlngs,
-      lineOptions: { styles: [{ color: '#0041b6', weight: 5, opacity: .65 }] },
-      createMarker: (i,wp)=> L.marker(wp.latLng).bindPopup(i===0||i===bestResult.latlngs.length-1?'Biochar Plant':bestResult.plots[i-1].properties.plot_id),
-      addWaypoints: false,
-      routeWhileDragging: false,
-      fitSelectedRoutes: true
-    }).addTo(map);
-
-    // --- เพิ่ม Hub Station ---
-    clearHubAndLines();
-    showHubStationAndLines(bestResult.plots);
-
+    // --- Routing: Biochar Plant → MainRoad → Hub → All Plot ---
+    await showHubStationAndFullRoute(bestResult.plots);
     // Show summary
     document.getElementById('history').innerHTML =
       `<h3>Best Cluster Route</h3>
       <ul>
         <li>Number of Plots in Cluster: <span class="cluster-carbon">${bestResult.plots.length}</span></li>
         <li>Total Residues(ton): <span class="cluster-carbon">${bestResult.carbonSum.toFixed(2)}</span></li>
-        <li>Distance(km): <span class="cluster-carbon">${bestResult.totalKm.toFixed(2)}</span></li>
+        <li>Distance (km): <span class="cluster-carbon">${bestResult.totalKm.toFixed(2)}</span></li>
         <li>Plots: ${bestResult.plots.map(f=>f.properties.plot_id).join(', ')}</li>
       </ul>`;
-    map.fitBounds(L.latLngBounds(bestResult.latlngs));
   }
 
   // --- Routing API คำนวณระยะรวมแบบวงกลม ---
@@ -298,49 +286,102 @@
     }
   }
 
-  // ---- HUB STATION & ROAD DISTANCE ----
+  // ---- HUB STATION + AUTO mainRoad + ROAD DISTANCE (3 segment) ----
   function clearHubAndLines() {
     if (hubMarker) { map.removeLayer(hubMarker); hubMarker = null; }
+    if (mainRoadMarker) { map.removeLayer(mainRoadMarker); mainRoadMarker = null; }
     if (hubPolylines.length) { hubPolylines.forEach(l => map.removeLayer(l)); hubPolylines = []; }
   }
 
-  async function showHubStationAndLines(clusterPlots) {
+  async function showHubStationAndFullRoute(clusterPlots) {
+    clearHubAndLines();
     // 1. หา centroid (hub) ของ cluster
     const fc = turf.featureCollection(clusterPlots.map(f=>turf.point(f.geometry.coordinates)));
     const centroid = turf.centroid(fc);
     const [lng, lat] = centroid.geometry.coordinates;
-    hubMarker = L.marker([lat, lng], {icon: L.icon({
+    const hubLatLng = [lat, lng];
+    hubMarker = L.marker(hubLatLng, {icon: L.icon({
       iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
       iconSize: [32,32]
     })}).addTo(map)
       .bindPopup('Hub Station<br>Lat: ' + lat.toFixed(5) + '<br>Lng: ' + lng.toFixed(5))
       .openPopup();
-    // 2. วาดเส้นและแสดง road distance ไปยังแต่ละ plot
-    for (const plot of clusterPlots) {
-      await showRoadDistanceFromHub([lat, lng], [plot.geometry.coordinates[1], plot.geometry.coordinates[0]], plot.properties.plot_id);
-    }
-  }
 
-  async function showRoadDistanceFromHub(hubLatLng, plotLatLng, plotId) {
-    const coords = `${hubLatLng[1]},${hubLatLng[0]};${plotLatLng[1]},${plotLatLng[0]}`;
-    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+    // 2. หา main road ที่ใกล้ hub ที่สุด (ใช้ OSRM nearest)
+    const nearestRoadUrl = `https://router.project-osrm.org/nearest/v1/driving/${lng},${lat}`;
+    let roadCoords = null;
     try {
+      const res = await fetch(nearestRoadUrl);
+      const json = await res.json();
+      if(json.code === "Ok" && json.waypoints && json.waypoints.length>0) {
+        roadCoords = json.waypoints[0].location;
+      }
+    } catch(e){}
+    if(!roadCoords) {
+      alert("ไม่พบจุดเข้าถนนหลัก (main road) ที่ใกล้ hub");
+      return;
+    }
+    mainRoadMarker = L.marker([roadCoords[1], roadCoords[0]], {icon: L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/854/854894.png',
+      iconSize: [28,28]
+    })}).addTo(map).bindPopup('Main Road Access').openPopup();
+
+    // 3. Routing: Biochar → main road
+    const biochar = data.features.find(f => f.properties.plot_id === "Biochar Plant");
+    let totalDist = 0;
+    let seg1 = 0, seg2 = 0, seg3 = 0;
+    // (1) Plant → main road
+    const biocharToRoadRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${biochar.geometry.coordinates[0]},${biochar.geometry.coordinates[1]};${roadCoords[0]},${roadCoords[1]}?overview=full&geometries=geojson`);
+    const biocharToRoadJson = await biocharToRoadRes.json();
+    if (biocharToRoadJson.code === "Ok" && biocharToRoadJson.routes && biocharToRoadJson.routes.length > 0) {
+      seg1 = biocharToRoadJson.routes[0].distance / 1000;
+      totalDist += seg1;
+      const coords = biocharToRoadJson.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+      const line = L.polyline(coords, {color: "#1786f4", weight: 4}).addTo(map)
+        .bindPopup(`Biochar → Main Road<br>ระยะทาง: ${seg1.toFixed(2)} กม.`);
+      hubPolylines.push(line);
+    }
+    // (2) main road → hub
+    const roadToHubRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${roadCoords[0]},${roadCoords[1]};${lng},${lat}?overview=full&geometries=geojson`);
+    const roadToHubJson = await roadToHubRes.json();
+    if (roadToHubJson.code === "Ok" && roadToHubJson.routes && roadToHubJson.routes.length > 0) {
+      seg2 = roadToHubJson.routes[0].distance / 1000;
+      totalDist += seg2;
+      const coords = roadToHubJson.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+      const line = L.polyline(coords, {color: "#07bd5c", weight: 4, dashArray:'8,6'}).addTo(map)
+        .bindPopup(`Main Road → Hub<br>ระยะทาง: ${seg2.toFixed(2)} กม.`);
+      hubPolylines.push(line);
+    }
+    // (3) hub → แต่ละ plot
+    let plotDists = [];
+    for (const plot of clusterPlots) {
+      const plotLatLng = [plot.geometry.coordinates[1], plot.geometry.coordinates[0]];
+      const url = `https://router.project-osrm.org/route/v1/driving/${lng},${lat};${plot.geometry.coordinates[0]},${plot.geometry.coordinates[1]}?overview=full&geometries=geojson`;
       const res = await fetch(url);
       const json = await res.json();
+      let dist = 0;
       if (json.code === "Ok" && json.routes && json.routes.length > 0) {
-        const dist = json.routes[0].distance / 1000; // km
-        const routeLine = L.polyline(json.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]), 
-          {color:'#e06a00',weight:3,dashArray:'6,6'}).addTo(map);
-        routeLine.bindPopup(`Road to <b>${plotId}</b>: ${dist.toFixed(2)} km`);
-        hubPolylines.push(routeLine);
+        dist = json.routes[0].distance / 1000;
+        totalDist += dist;
+        plotDists.push({plot: plot.properties.plot_id, dist});
+        const coords = json.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        const line = L.polyline(coords, {color: "#e06a00", weight: 3, dashArray: '6,6'}).addTo(map)
+          .bindPopup(`Hub → ${plot.properties.plot_id}<br>ระยะทาง: ${dist.toFixed(2)} กม.`);
+        hubPolylines.push(line);
       }
-    } catch(e) {
-      // Fallback: straight line
-      const routeLine = L.polyline([hubLatLng, plotLatLng], 
-        {color:'#e06a00',weight:2,dashArray:'6,6'}).addTo(map);
-      routeLine.bindPopup(`Road to <b>${plotId}</b>: (estimate)`);
-      hubPolylines.push(routeLine);
     }
+    // 4. สรุป
+    let plotList = plotDists.map(p=>`<li>Hub → ${p.plot}: <b>${p.dist.toFixed(2)}</b> กม.</li>`).join('');
+    document.getElementById('history').innerHTML += 
+      `<hr><b>ระยะทางแต่ละช่วง:</b>
+        <ul>
+        <li>Biochar Plant → Main Road: <b>${seg1.toFixed(2)}</b> กม.</li>
+        <li>Main Road → Hub: <b>${seg2.toFixed(2)}</b> กม.</li>
+        ${plotList}
+        </ul>
+      <b>รวมระยะทางทั้งหมด:</b> <span class="cluster-carbon">${totalDist.toFixed(2)}</span> กม.<br>
+      <span style="font-size:12px;color:#888;">คลิกแต่ละเส้นทางเพื่อดูระยะแต่ละช่วง</span>`;
+    map.fitBounds(L.latLngBounds([biochar.geometry.coordinates.reverse(), hubLatLng]));
   }
 
   function showMonitoring() {

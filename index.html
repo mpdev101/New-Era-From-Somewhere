@@ -323,7 +323,9 @@
     // (1) Biochar → main road
     const biochar = data.features.find(f => f.properties.plot_id === "Biochar Plant");
     let seg1 = 0, seg2 = 0;
-    const biocharToRoadRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${biochar.geometry.coordinates[0]},${biochar.geometry.coordinates[1]};${roadCoords[0]},${roadCoords[1]}?overview=full&geometries=geojson`);
+    const biocharToRoadRes = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${biochar.geometry.coordinates[0]},${biochar.geometry.coordinates[1]};${roadCoords[0]},${roadCoords[1]}?overview=full&geometries=geojson`
+    );
     const biocharToRoadJson = await biocharToRoadRes.json();
     if (biocharToRoadJson.code === "Ok" && biocharToRoadJson.routes && biocharToRoadJson.routes.length > 0) {
       seg1 = biocharToRoadJson.routes[0].distance / 1000;
@@ -332,14 +334,22 @@
         .bindPopup(`Biochar → Main Road<br>ระยะทาง: ${seg1.toFixed(2)} กม.`);
       hubPolylines.push(line);
     }
-    // (2) main road → hub (routing จริง)
-    const roadToHubRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${roadCoords[0]},${roadCoords[1]};${lng},${lat}?overview=full&geometries=geojson`);
+
+    // ** (2) main road → hub (routing จริง) **
+    const roadToHubRes = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${roadCoords[0]},${roadCoords[1]};${lng},${lat}?overview=full&geometries=geojson`
+    );
     const roadToHubJson = await roadToHubRes.json();
     if (roadToHubJson.code === "Ok" && roadToHubJson.routes && roadToHubJson.routes.length > 0) {
       seg2 = roadToHubJson.routes[0].distance / 1000;
       const coords = roadToHubJson.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
       const line = L.polyline(coords, {color: "#07bd5c", weight: 4, dashArray:'8,6'}).addTo(map)
         .bindPopup(`Main Road → Hub<br>ระยะทาง: ${seg2.toFixed(2)} กม.`);
+      hubPolylines.push(line);
+    } else {
+      // fallback เส้นตรง (ถ้า routing ไม่เจอ)
+      const line = L.polyline([[roadCoords[1], roadCoords[0]], hubLatLng], {color:'#07bd5c', weight: 2, dashArray:'5,7'}).addTo(map)
+        .bindPopup(`Main Road → Hub<br>ไม่พบถนนในฐานข้อมูล`);
       hubPolylines.push(line);
     }
 
@@ -363,7 +373,8 @@
         </ul>
       <span style="font-size:12px;color:#888;">คลิกแต่ละเส้นทางเพื่อดูระยะแต่ละช่วง</span>`;
     map.fitBounds(L.latLngBounds([biochar.geometry.coordinates.reverse(), hubLatLng]));
-  }
+}
+
 
   function showMonitoring() {
     document.getElementById('monitoring').style.display = "block";

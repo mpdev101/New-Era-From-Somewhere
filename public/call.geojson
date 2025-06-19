@@ -2,15 +2,24 @@
   "type": "FeatureCollection",
   "features": [
     {"type":"Feature","properties":{"plot_id":"Biochar Plant"},"geometry":{"type":"Point","coordinates":[99.4909624,19.2296513]}},
-    {"type":"Feature","properties":{"plot_id":"MJD001","carbon_credit":4.1},"geometry":{"type":"Point","coordinates":[99.56857,19.18492]}},
-    {"type":"Feature","properties":{"plot_id":"MJD002","carbon_credit":3.9},"geometry":{"type":"Point","coordinates":[99.56974,19.18308]}},
-    {"type":"Feature","properties":{"plot_id":"MJD003","carbon_credit":4.4},"geometry":{"type":"Point","coordinates":[99.56686,19.18147]}},
-    {"type":"Feature","properties":{"plot_id":"MJD004","carbon_credit":3.6},"geometry":{"type":"Point","coordinates":[99.56497,19.18441]}},
-    {"type":"Feature","properties":{"plot_id":"MJD005","carbon_credit":4.2},"geometry":{"type":"Point","coordinates":[99.56358,19.18251]}},
-    {"type":"Feature","properties":{"plot_id":"MJD006","carbon_credit":4.0},"geometry":{"type":"Point","coordinates":[99.56442,19.18018]}},
-    {"type":"Feature","properties":{"plot_id":"MJD007","carbon_credit":3.7},"geometry":{"type":"Point","coordinates":[99.56742,19.17893]}},
-    {"type":"Feature","properties":{"plot_id":"MJD008","carbon_credit":4.5},"geometry":{"type":"Point","coordinates":[99.56231,19.18372]}},
-    {"type":"Feature","properties":{"plot_id":"MJD009","carbon_credit":3.8},"geometry":{"type":"Point","coordinates":[99.56113,19.18067]}},
-    {"type":"Feature","properties":{"plot_id":"MJD010","carbon_credit":4.3},"geometry":{"type":"Point","coordinates":[99.56934,19.18624]}}
+    {"type":"Feature","properties":{"plot_id":"MJD001","carbon_credit":4.1},"geometry":{"type":"Point","coordinates":[99.4734810,19.1115230]}},
+    {"type":"Feature","properties":{"plot_id":"MJD002","carbon_credit":3.9},"geometry":{"type":"Point","coordinates":[99.4680990,19.1087900]}},
+    {"type":"Feature","properties":{"plot_id":"MJD003","carbon_credit":4.4},"geometry":{"type":"Point","coordinates":[99.4785450,19.1078410]}},
+    {"type":"Feature","properties":{"plot_id":"MJD004","carbon_credit":3.6},"geometry":{"type":"Point","coordinates":[99.4829820,19.1109070]}},
+    {"type":"Feature","properties":{"plot_id":"MJD005","carbon_credit":4.2},"geometry":{"type":"Point","coordinates":[99.4864410,19.1152210]}},
+    {"type":"Feature","properties":{"plot_id":"MJD006","carbon_credit":4.0},"geometry":{"type":"Point","coordinates":[99.4818750,19.1051730]}},
+    {"type":"Feature","properties":{"plot_id":"MJD007","carbon_credit":3.7},"geometry":{"type":"Point","coordinates":[99.4873680,19.1138750]}},
+    {"type":"Feature","properties":{"plot_id":"MJD008","carbon_credit":4.5},"geometry":{"type":"Point","coordinates":[99.4909820,19.1101530]}},
+    {"type":"Feature","properties":{"plot_id":"MJD009","carbon_credit":3.8},"geometry":{"type":"Point","coordinates":[99.4856600,19.1220580]}},
+    {"type":"Feature","properties":{"plot_id":"MJD010","carbon_credit":4.3},"geometry":{"type":"Point","coordinates":[99.4689150,19.1039240]}},
+
+    {"type":"Feature","properties":{"plot_id":"MJD0011","carbon_credit":5.0},"geometry":{"type":"Point","coordinates":[99.4654800,19.0778790]}},
+    {"type":"Feature","properties":{"plot_id":"MJD0012","carbon_credit":10.0},"geometry":{"type":"Point","coordinates":[99.4672630,19.0777320]}},
+    {"type":"Feature","properties":{"plot_id":"MJD0013","carbon_credit":4.0},"geometry":{"type":"Point","coordinates":[99.4686360,19.0779620]}},
+    {"type":"Feature","properties":{"plot_id":"MJD0014","carbon_credit":2.5},"geometry":{"type":"Point","coordinates":[99.4662780,19.0784130]}},
+    {"type":"Feature","properties":{"plot_id":"MJD0015","carbon_credit":3.2},"geometry":{"type":"Point","coordinates":[99.4687740,19.0781680]}},
+    {"type":"Feature","properties":{"plot_id":"MJD0016","carbon_credit":4.3},"geometry":{"type":"Point","coordinates":[99.4678460,19.0790140]}},
+    {"type":"Feature","properties":{"plot_id":"MJD0017","carbon_credit":3.5},"geometry":{"type":"Point","coordinates":[99.4651370,19.0780950]}}
+
   ]
 }

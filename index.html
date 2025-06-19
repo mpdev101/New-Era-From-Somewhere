@@ -71,8 +71,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
   <script>
   let map, markerCluster, geoLayer, data, routingCtl;
-  let routingActive = false; // For toggle
+  let routingActive = false;
   let selectedPoints = [];
+  let hubMarker = null;
+  let hubPolylines = [];
 
   function initMap() {
     map = L.map('map').setView([19.2, 99.56], 13);
@@ -128,6 +130,7 @@
     markerCluster.on('clusterclick', function (a) {
       map.fitBounds(a.layer.getBounds());
     });
+    clearHubAndLines();
   }
 
   function buildPlotButtons() {
@@ -206,9 +209,10 @@
     if (routingCtl) { map.removeControl(routingCtl); routingCtl = null; }
     routingActive = false;
     showHistory();
+    clearHubAndLines();
   }
 
-  // ---- Cluster + Net Calculation Routing ----
+  // ---- Cluster + Net Calculation Routing + Hub ----
   async function calcBestClusterRoute() {
     closeRoute();
     routingActive = true;
@@ -261,6 +265,11 @@
       routeWhileDragging: false,
       fitSelectedRoutes: true
     }).addTo(map);
+
+    // --- เพิ่ม Hub Station ---
+    clearHubAndLines();
+    showHubStationAndLines(bestResult.plots);
+
     // Show summary
     document.getElementById('history').innerHTML =
       `<h3>Best Cluster Route</h3>
@@ -268,17 +277,14 @@
         <li>Number of Plots in Cluster: <span class="cluster-carbon">${bestResult.plots.length}</span></li>
         <li>Total Residues(ton): <span class="cluster-carbon">${bestResult.carbonSum.toFixed(2)}</span></li>
         <li>Distance(km): <span class="cluster-carbon">${bestResult.totalKm.toFixed(2)}</span></li>
-     <!--  <li>Net (บาท): // <span class="cluster-carbon">${bestResult.net.toFixed(2)}</span></li>  --> 
         <li>Plots: ${bestResult.plots.map(f=>f.properties.plot_id).join(', ')}</li>
-      </ul>
-       <!--  <small>สูตร:(carbon_sum × 50) - (distance_km × 5)</small> --> `;  
+      </ul>`;
     map.fitBounds(L.latLngBounds(bestResult.latlngs));
   }
 
   // --- Routing API คำนวณระยะรวมแบบวงกลม ---
   async function getRouteDistance(latlngs){
     // OSRM route API (open, limited for demo only)
-    // Build waypoints string
     const coords = latlngs.map(ll=>`${ll.lng},${ll.lat}`).join(';');
     const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=false&geometries=geojson`;
     try {
@@ -289,6 +295,51 @@
       else return turf.length(turf.lineString(latlngs.map(ll=>[ll.lng,ll.lat])),{units:'kilometers'});
     } catch(e) {
       return turf.length(turf.lineString(latlngs.map(ll=>[ll.lng,ll.lat])),{units:'kilometers'});
+    }
+  }
+
+  // ---- HUB STATION & ROAD DISTANCE ----
+  function clearHubAndLines() {
+    if (hubMarker) { map.removeLayer(hubMarker); hubMarker = null; }
+    if (hubPolylines.length) { hubPolylines.forEach(l => map.removeLayer(l)); hubPolylines = []; }
+  }
+
+  async function showHubStationAndLines(clusterPlots) {
+    // 1. หา centroid (hub) ของ cluster
+    const fc = turf.featureCollection(clusterPlots.map(f=>turf.point(f.geometry.coordinates)));
+    const centroid = turf.centroid(fc);
+    const [lng, lat] = centroid.geometry.coordinates;
+    hubMarker = L.marker([lat, lng], {icon: L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+      iconSize: [32,32]
+    })}).addTo(map)
+      .bindPopup('Hub Station<br>Lat: ' + lat.toFixed(5) + '<br>Lng: ' + lng.toFixed(5))
+      .openPopup();
+    // 2. วาดเส้นและแสดง road distance ไปยังแต่ละ plot
+    for (const plot of clusterPlots) {
+      await showRoadDistanceFromHub([lat, lng], [plot.geometry.coordinates[1], plot.geometry.coordinates[0]], plot.properties.plot_id);
+    }
+  }
+
+  async function showRoadDistanceFromHub(hubLatLng, plotLatLng, plotId) {
+    const coords = `${hubLatLng[1]},${hubLatLng[0]};${plotLatLng[1]},${plotLatLng[0]}`;
+    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+    try {
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.code === "Ok" && json.routes && json.routes.length > 0) {
+        const dist = json.routes[0].distance / 1000; // km
+        const routeLine = L.polyline(json.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]), 
+          {color:'#e06a00',weight:3,dashArray:'6,6'}).addTo(map);
+        routeLine.bindPopup(`Road to <b>${plotId}</b>: ${dist.toFixed(2)} km`);
+        hubPolylines.push(routeLine);
+      }
+    } catch(e) {
+      // Fallback: straight line
+      const routeLine = L.polyline([hubLatLng, plotLatLng], 
+        {color:'#e06a00',weight:2,dashArray:'6,6'}).addTo(map);
+      routeLine.bindPopup(`Road to <b>${plotId}</b>: (estimate)`);
+      hubPolylines.push(routeLine);
     }
   }
 

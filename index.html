@@ -367,17 +367,24 @@
         }
         // (2) main road → hub (routing จริง)
         const roadToHubRes = await fetch(
-          `https://router.project-osrm.org/route/v1/driving/${roadCoords[0]},${roadCoords[1]};${lng},${lat}?overview=full&geometries=geojson`
-        );
-        const roadToHubJson = await roadToHubRes.json();
-        if (roadToHubJson.code === "Ok" && roadToHubJson.routes && roadToHubJson.routes.length > 0) {
-          const dist = roadToHubJson.routes[0].distance / 1000;
-          const coords = roadToHubJson.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-          const line = L.polyline(coords, {color: "#07bd5c", weight: 4, dashArray:'8,6'}).addTo(map)
-            .bindPopup(`Main Road → Hub#${idx+1}<br>ระยะทาง: ${dist.toFixed(2)} กม.`);
-          hubPolylines.push(line);
-          summaryHtml += `<li>Main Road → Hub#${idx+1}: <b>${dist.toFixed(2)}</b> กม.</li>`;
-        }
+        `https://router.project-osrm.org/route/v1/driving/${roadCoords[0]},${roadCoords[1]};${lng},${lat}?overview=full&geometries=geojson`
+          );
+      const roadToHubJson = await roadToHubRes.json();
+      if (roadToHubJson.code === "Ok" && roadToHubJson.routes && roadToHubJson.routes.length > 0) {
+        const dist = roadToHubJson.routes[0].distance / 1000;
+        const coords = roadToHubJson.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        const line = L.polyline(coords, {color: "#07bd5c", weight: 4, dashArray:'8,6'}).addTo(map)
+          .bindPopup(`Main Road → Hub#${idx+1}<br>ระยะทาง: ${dist.toFixed(2)} กม.`);
+        hubPolylines.push(line);
+        summaryHtml += `<li>Main Road → Hub#${idx+1}: <b>${dist.toFixed(2)}</b> กม.</li>`;
+      } else {
+        // วาดเส้นตรงแทน และคำนวณระยะทาง
+        const line = L.polyline([[roadCoords[1], roadCoords[0]], [lat, lng]], {color:'#07bd5c', weight:2, dashArray:'5,7'}).addTo(map)
+          .bindPopup(`Main Road → Hub#${idx+1}<br>ระยะทาง (เส้นตรง): ${turf.distance(turf.point([roadCoords[0], roadCoords[1]]), turf.point([lng, lat]), {units:'kilometers'}).toFixed(2)} กม.<br>(ไม่พบถนนในฐานข้อมูล)`);
+        hubPolylines.push(line);
+        summaryHtml += `<li>Main Road → Hub#${idx+1}: <b>${turf.distance(turf.point([roadCoords[0], roadCoords[1]]), turf.point([lng, lat]), {units:'kilometers'}).toFixed(2)}</b> กม. <span style="color:#f80;">(เส้นตรง)</span></li>`;
+      }
+
       }
       // (3) hub → plot ทุก plot ในกลุ่มย่อย (เส้นตรง)
       let plotList = '';

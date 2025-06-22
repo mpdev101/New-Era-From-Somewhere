@@ -102,7 +102,7 @@
     L.geoJSON(feats, {
       pointToLayer: (f, latlng) => L.marker(latlng),
       onEachFeature: (f, lyr) => {
-        lyr.bindPopup(`<strong>${f.properties.plot_id}</strong><br>CO₂ ${f.properties.carbon_credit ?? '-'}`);
+        lyr.bindPopup(`<strong>${f.properties.plot_id}</strong><br>Residues(ton) ${f.properties.carbon_credit ?? '-'}`);
         lyr.on('click', e => {
           if (e.originalEvent.ctrlKey) {
             selectedPoints.push(e.latlng);
@@ -316,7 +316,7 @@
     // 2. Routing: Biochar → main road (ของ mini-cluster แรกเท่านั้น, เลือก hub แรกเป็นเป้าหมาย)
     const biochar = data.features.find(f => f.properties.plot_id === "Biochar Plant");
     const mainResults = [];
-    let summaryHtml = `<h3>Hub Station ทั้งหมด (${miniClusters.length})</h3><ul>`;
+    let summaryHtml = `<h3>Total Hub Station (${miniClusters.length})</h3><ul>`;
     for (let idx = 0; idx < miniClusters.length; idx++) {
       const mini = miniClusters[idx];
       // 2.1 centroid (hub) mini-cluster
@@ -395,7 +395,7 @@
           .bindPopup(`Hub#${idx+1} → ${plot.properties.plot_id}<br>ระยะทาง: ${d.toFixed(2)} กม.`);
         hubPolylines.push(line);
       }
-      summaryHtml += `<li>Hub#${idx+1} ดูแล: ${plotList.replace(/, $/,'')}</li>`;
+      summaryHtml += `<li>Hub#${idx+1} to: ${plotList.replace(/, $/,'')}</li>`;
     }
     summaryHtml += "</ul>";
     document.getElementById('history').innerHTML = summaryHtml + 

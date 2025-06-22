@@ -249,11 +249,9 @@
     closeRoute();
     routingActive = true;
 
-    // 1. get all plots (not Biochar)
     const plots = data.features.filter(f => f.properties.plot_id !== "Biochar Plant");
     if (plots.length === 0) return alert("ยังไม่มี plot เพียงพอ");
 
-    // 2. mini-cluster รัศมี 1km
     const miniClusters = findMiniClusters(plots, 1);
     const hubs = miniClusters.map(mini => {
       const fc = turf.featureCollection(mini.map(f=>turf.point(f.geometry.coordinates)));
@@ -265,7 +263,6 @@
       }
     });
 
-    // 3. candidate main road points: รอบ plot ทุกจุด 8 ทิศ, รัศมี 0.8 กม.
     let candidatePoints = [];
     for (const plot of plots) {
       for(let angle=0; angle<360; angle+=45){
@@ -279,17 +276,14 @@
       }
     }
 
-    // 4. หา hub ที่มี plot เยอะสุด (สมมติเป็น cluster หลัก)
     let mainCluster = hubs[0];
     for(const h of hubs) if(h.plots.length>mainCluster.plots.length) mainCluster=h;
 
-    // 5. หาค่า net ดีที่สุดสำหรับแต่ละ candidate
-    let bestNet = -Infinity, bestMainRoad = null, bestHub = null, bestRouteGeo = null, bestDist = 0;
+    let bestNet = -Infinity, bestMainRoad = null, bestHub = null, bestRouteGeo = null, bestDist = 0, isRoute = false;
+
     for(const [lng,lat] of candidatePoints){
-      // หา hub ที่ใกล้ main road ที่สุด (เฉพาะ mainCluster)
       const dToHub = turf.distance(turf.point([lng,lat]), turf.point([mainCluster.lng, mainCluster.lat]), {units:'kilometers'});
-      // routing จริง
-      let dist = dToHub, geo = [[lat,lng],[mainCluster.lat,mainCluster.lng]];
+      let dist = dToHub, geo = [[lat,lng],[mainCluster.lat,mainCluster.lng]], routed = false;
       try {
         const url = `https://router.project-osrm.org/route/v1/driving/${lng},${lat};${mainCluster.lng},${mainCluster.lat}?overview=full&geometries=geojson`;
         const res = await fetch(url);
@@ -297,28 +291,38 @@
         if(json.code==="Ok" && json.routes && json.routes.length>0){
           dist = json.routes[0].distance/1000;
           geo = json.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+          routed = true;
         }
       }catch(e){}
       const carbonSum = mainCluster.plots.reduce((s,f)=>(s+Number(f.properties.carbon_credit||0)),0);
       const net = (carbonSum*50)-(dist*5);
-      if(net > bestNet){
-        bestNet = net; bestMainRoad = {lng,lat}; bestHub=mainCluster; bestRouteGeo=geo; bestDist=dist;
+      if(routed && net > bestNet){
+        bestNet = net;
+        bestMainRoad = {lng,lat};
+        bestHub=mainCluster;
+        bestRouteGeo=geo;
+        bestDist=dist;
+        isRoute = true;
+      }
+      if(!isRoute && net > bestNet){
+        bestNet = net;
+        bestMainRoad = {lng,lat};
+        bestHub=mainCluster;
+        bestRouteGeo=geo;
+        bestDist=dist;
+        isRoute = false;
       }
     }
     if(!bestMainRoad){ alert("หา main road อัตโนมัติไม่ได้"); return;}
 
-    // 6. วาด marker main road
     mainRoadMarker = L.marker([bestMainRoad.lat, bestMainRoad.lng], {
       icon: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/854/854894.png',iconSize:[28,28]})
     }).addTo(map)
       .bindPopup('Main Road<br>Lat: '+bestMainRoad.lat.toFixed(5)+'<br>Lng: '+bestMainRoad.lng.toFixed(5)).openPopup();
 
-    // 7. วาดเส้น Main Road → Hub จริง/เส้นตรง
     L.polyline(bestRouteGeo, {color: "#07bd5c", weight: 4, dashArray:'8,6'}).addTo(map)
-      .bindPopup(`Main Road → Hub#1<br>ระยะทาง: ${bestDist.toFixed(2)} กม.`);
-    hubPolylines.push(mainRoadMarker);
+      .bindPopup(`Main Road → Hub#1<br>ระยะทาง: ${bestDist.toFixed(2)} กม.${isRoute ? '' : ' (เส้นตรง)'}`);
 
-    // 8. วาด hub markers และเส้นตรง hub→plot
     hubs.forEach((h, idx) => {
       const hubMarker = L.marker([h.lat, h.lng], {icon: L.icon({
         iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
@@ -338,7 +342,6 @@
       });
     });
 
-    // 9. วาดเส้นตรง Hub ↔ Hub ที่อยู่ห่างกัน 1-5 กม.
     for (let i = 0; i < hubs.length; i++) {
       for (let j = i+1; j < hubs.length; j++) {
         const d = turf.distance(
@@ -354,11 +357,10 @@
       }
     }
 
-    // 10. สรุปใน history
     let summaryHtml = `<h3>Routing Summary</h3>
       <ul>
         <li>Main Road (auto): <b>${bestMainRoad.lat.toFixed(5)}, ${bestMainRoad.lng.toFixed(5)}</b></li>
-        <li>Main Road → Hub#1: <b>${bestDist.toFixed(2)}</b> กม.</li>
+        <li>Main Road → Hub#1: <b>${bestDist.toFixed(2)}</b> กม.${isRoute ? '' : ' (เส้นตรง)'}</li>
         <li>Net (บาท): <b>${bestNet.toFixed(2)}</b></li>
         <li>จำนวน Hub: <b>${hubs.length}</b></li>
       </ul>

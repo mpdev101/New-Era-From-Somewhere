@@ -96,7 +96,7 @@
     L.geoJSON(feats, {
       pointToLayer: (f, latlng) => L.marker(latlng),
       onEachFeature: (f, lyr) => {
-        lyr.bindPopup(`<strong>${f.properties.plot_id}</strong><br>CO₂ ${f.properties.carbon_credit ?? '-'}`);
+        lyr.bindPopup(`<strong>${f.properties.plot_id}</strong><br>ton ${f.properties.carbon_credit ?? '-'}`);
         lyr.on('click', e => {
           if (e.originalEvent.ctrlKey) {
             selectedPoints.push(e.latlng);

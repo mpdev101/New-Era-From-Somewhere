@@ -1,0 +1,26 @@
+<table border="1" id="dataTable">
+  <thead>
+    <tr>
+      <th>Plot ID</th>
+      <th>Longitude</th>
+      <th>Latitude</th>
+      <th>Residues (ton)</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+<script>
+const apiURL = 'https://script.google.com/macros/s/xxxx/exec'; // URL เดียวกับข้อบน
+async function fetchData() {
+  const res = await fetch(apiURL);
+  const data = await res.json();
+  const tbody = document.getElementById('dataTable').querySelector('tbody');
+  tbody.innerHTML = '';
+  data.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row.plotid}</td><td>${row.long}</td><td>${row.lat}</td><td>${row.residue}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+fetchData();
+</script>

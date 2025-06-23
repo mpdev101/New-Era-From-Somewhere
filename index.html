@@ -360,9 +360,9 @@
             const dist = biocharToRoadJson.routes[0].distance / 1000;
             const coords = biocharToRoadJson.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
             const line = L.polyline(coords, {color: "#1786f4", weight: 4}).addTo(map)
-              .bindPopup(`Biochar → Main Road<br>ระยะทาง: ${dist.toFixed(2)} กม.`);
+              .bindPopup(`Biochar → Main Road<br>ระยะทาง: ${dist.toFixed(2)} km`);
             hubPolylines.push(line);
-            summaryHtml += `<li>Biochar Plant → Main Road (Hub#${idx+1}): <b>${dist.toFixed(2)}</b> กม.</li>`;
+            summaryHtml += `<li>Biochar Plant → Main Road (Hub#${idx+1}): <b>${dist.toFixed(2)}</b> km</li>`;
           }
         }
         // (2) main road → hub (routing จริง)
@@ -374,9 +374,9 @@
             const dist = roadToHubJson.routes[0].distance / 1000;
             const coords = roadToHubJson.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
             const line = L.polyline(coords, {color: "#07bd5c", weight: 4, dashArray:'8,6'}).addTo(map)
-              .bindPopup(`Main Road → Hub#${idx+1}<br>ระยะทาง: ${dist.toFixed(2)} กม.`);
+              .bindPopup(`Main Road → Hub#${idx+1}<br>ระยะทาง: ${dist.toFixed(2)} km`);
             hubPolylines.push(line);
-            summaryHtml += `<li>Main Road → Hub#${idx+1}: <b>${dist.toFixed(2)}</b> กม.</li>`;
+            summaryHtml += `<li>Main Road → Hub#${idx+1}: <b>${dist.toFixed(2)}</b> km </li>`;
           } else {
             // วาดเส้นตรงแทน และคำนวณระยะทาง
             const line = L.polyline([[roadCoords[1], roadCoords[0]], [lat, lng]], {color:'#07bd5c', weight:2, dashArray:'5,7'}).addTo(map)
@@ -390,9 +390,9 @@
       for (const plot of mini) {
         const plotLatLng = [plot.geometry.coordinates[1], plot.geometry.coordinates[0]];
         const d = turf.distance(turf.point([lng,lat]), turf.point(plot.geometry.coordinates), {units:'kilometers'});
-        plotList += `${plot.properties.plot_id} (${d.toFixed(2)} กม.), `;
+        plotList += `${plot.properties.plot_id} (${d.toFixed(2)} km), `;
         const line = L.polyline([hubLatLng, plotLatLng], {color:'#e06a00', weight:2, dashArray:'2,7'}).addTo(map)
-          .bindPopup(`Hub#${idx+1} → ${plot.properties.plot_id}<br>ระยะทาง: ${d.toFixed(2)} กม.`);
+          .bindPopup(`Hub#${idx+1} → ${plot.properties.plot_id}<br>ระยะทาง: ${d.toFixed(2)} km`);
         hubPolylines.push(line);
       }
       summaryHtml += `<li>Hub#${idx+1} to: ${plotList.replace(/, $/,'')}</li>`;

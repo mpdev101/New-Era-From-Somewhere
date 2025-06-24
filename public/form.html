@@ -6,7 +6,7 @@
   <button type="submit">Submit</button>
 </form>
 <script>
-const apiURL = 'https://script.google.com/macros/s/AKfycbyVgoitfaj-P-5ANzheVydBNqz7Dt87SZHtnO3SlECIP7y9yaFrllu46GhYygWVrSgw/exec'; // ใส่ URL ของคุณ
+const apiURL = 'https://script.google.com/macros/s/AKfycbyVgoitfaj-P-5ANzheVydBNqz7Dt87SZHtnO3SlECIP7y9yaFrllu46GhYygWVrSgw/exec'; // <- ต้องลงท้ายด้วย /exec
 
 document.getElementById('plotForm').onsubmit = async function(e) {
   e.preventDefault();
@@ -24,6 +24,4 @@ document.getElementById('plotForm').onsubmit = async function(e) {
   alert('ส่งข้อมูลสำเร็จ!');
   document.getElementById('plotForm').reset();
 };
-
-
 </script>

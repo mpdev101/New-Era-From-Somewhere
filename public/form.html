@@ -1,0 +1,27 @@
+<form id="plotForm">
+  <input type="text" id="plot_id" placeholder="Plot ID" required><br>
+  <input type="number" step="0.01" id="carbon_credit" placeholder="Carbon Credit" required><br>
+  <input type="text" id="longitude" placeholder="Longitude" required><br>
+  <input type="text" id="latitude" placeholder="Latitude" required><br>
+  <button type="submit">Submit</button>
+</form>
+<script>
+const apiURL = 'https://script.google.com/macros/s/AKfycbyEvb5T_vJDZ_2LXtn3pkpYlgGGA39rEGfx_OmN3dQ/dev'; // ใส่ URL ของคุณ
+
+document.getElementById('plotForm').onsubmit = async function(e) {
+  e.preventDefault();
+  const data = {
+    plot_id: document.getElementById('plot_id').value,
+    carbon_credit: parseFloat(document.getElementById('carbon_credit').value),
+    longitude: parseFloat(document.getElementById('longitude').value),
+    latitude: parseFloat(document.getElementById('latitude').value)
+  };
+  await fetch(apiURL, {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' }
+  });
+  alert('ส่งข้อมูลสำเร็จ!');
+  document.getElementById('plotForm').reset();
+};
+</script>

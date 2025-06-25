@@ -1,4 +1,3 @@
-
 <form id="plotForm">
   <input type="text" name="plot_id" placeholder="Plot ID" required><br>
   <input type="number" step="0.01" name="carbon_credit" placeholder="Carbon Credit" required><br>
@@ -7,16 +6,20 @@
   <button type="submit">Submit</button>
 </form>
 <script>
-const apiURL = 'https://script.google.com/macros/s/AKfycbyVgoitfaj-P-5ANzheVydBNqz7Dt87SZHtnO3SlECIP7y9yaFrllu46GhYygWVrSgw/exec'; // ใส่ URL ของคุณ
+const apiURL = 'https://script.google.com/macros/s/AKfycbyVgoitfaj-P-5ANzheVydBNqz7Dt87SZHtnO3SlECIP7y9yaFrllu46GhYygWVrSgw/exec'; // เปลี่ยนเป็น /exec และของ deployment ใหม่
 
 document.getElementById('plotForm').onsubmit = async function(e) {
   e.preventDefault();
   const formData = new FormData(e.target);
-  await fetch(apiURL, {
-    method: 'POST',
-    body: formData // ไม่ต้องใส่ header ใดๆ
-  });
-  alert('ส่งข้อมูลสำเร็จ!');
-  document.getElementById('plotForm').reset();
+  try {
+    await fetch(apiURL, {
+      method: 'POST',
+      body: formData // *** ห้ามมี headers ***
+    });
+    alert('ส่งข้อมูลสำเร็จ!');
+    document.getElementById('plotForm').reset();
+  } catch(err) {
+    alert('ส่งข้อมูลไม่สำเร็จ');
+  }
 };
 </script>

@@ -8,7 +8,7 @@
 <script>
 const apiURL = 'https://script.google.com/macros/s/AKfycbyVgoitfaj-P-5ANzheVydBNqz7Dt87SZHtnO3SlECIP7y9yaFrllu46GhYygWVrSgw/exec'; // เปลี่ยนเป็น /exec และของ deployment ใหม่
 
-document.getElementById('plotForm').onsubmit = async function(e) {
+document.getElementById('dataForm').onsubmit = async function(e) {
   e.preventDefault();
   const formData = new FormData(e.target);
   try {

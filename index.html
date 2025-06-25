@@ -85,14 +85,20 @@
 
     const geojsonURL = "https://script.google.com/macros/s/AKfycbwV19me9_LqPHejZ2_my177cYVGksMNaGXN7cULBltoZH0KsbsY8vgQg_3T9zlWV-TLiA/exec";
     fetch(geojsonURL)
-      .then(r => r.json())
-      .then(json => {
-        data = { type: 'FeatureCollection', features: json.features.map(f => ({ ...f, properties: { hasHistory: true, ...f.properties } })) };
-        drawLayer();
-        buildPlotButtons();
-        setupForm();
-        setupControls();
-      });
+    .then(res => res.json())
+    .then(geojson => {
+      L.geoJSON(geojson).addTo(map);
+    });
+
+      
+     // .then(r => r.json())
+   //   .then(json => {
+    //    data = { type: 'FeatureCollection', features: json.features.map(f => ({ ...f, properties: { hasHistory: true, ...f.properties } })) };
+    //    drawLayer();
+     //   buildPlotButtons();
+     //   setupForm();
+     //   setupControls();
+    //  });
   }
 
   function drawLayer(filterFn) {

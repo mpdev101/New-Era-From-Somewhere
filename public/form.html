@@ -1,4 +1,4 @@
-<form id="dataForm">
+<form id="dataform">
   <input type="text" name="plot_id" placeholder="Plot ID" required><br>
   <input type="number" step="0.01" name="carbon_credit" placeholder="Carbon Credit" required><br>
   <input type="text" name="longitude" placeholder="Longitude" required><br>
@@ -8,7 +8,7 @@
 <script>
 const apiURL = 'https://script.google.com/macros/s/AKfycbyeZ8BidtOhvZzjBQh8bFE-8op_50BnLZSgWqciWVxEoH9MieFZJhqAoNHafOInWpyCKw/exec'; // เปลี่ยนเป็น /exec และของ deployment ใหม่
 
-document.getElementById('dataForm').onsubmit = async function(e) {
+document.getElementById('dataform').onsubmit = async function(e) {
   e.preventDefault();
   const formData = new FormData(e.target);
   try {
@@ -17,7 +17,7 @@ document.getElementById('dataForm').onsubmit = async function(e) {
       body: formData // *** ห้ามมี headers ***
     });
     alert('ส่งข้อมูลสำเร็จ!');
-    document.getElementById('dataForm').reset();
+    document.getElementById('dataform').reset();
   } catch(err) {
     alert('ส่งข้อมูลไม่สำเร็จ');
   }

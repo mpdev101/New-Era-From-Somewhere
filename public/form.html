@@ -17,7 +17,7 @@ document.getElementById('dataForm').onsubmit = async function(e) {
       body: formData // *** ห้ามมี headers ***
     });
     alert('ส่งข้อมูลสำเร็จ!');
-    document.getElementById('plotForm').reset();
+    document.getElementById('dataForm').reset();
   } catch(err) {
     alert('ส่งข้อมูลไม่สำเร็จ');
   }

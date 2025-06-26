@@ -84,7 +84,8 @@
       .on('markgeocode', e => map.fitBounds(e.geocode.bbox)).addTo(map);
 
    // fetch('public/call.geojson')
-      fetch('https://corsproxy.io/?https://script.google.com/macros/s/AKfycbwjsnvnfVmURYof6Gb0xJrPxjbwSs6x7jjemDylWxw8J__SxnLale4BODtp0Vt8BNLgsQ/exec')
+      // fetch('https://corsproxy.io/?https://script.google.com/macros/s/AKfycbwjsnvnfVmURYof6Gb0xJrPxjbwSs6x7jjemDylWxw8J__SxnLale4BODtp0Vt8BNLgsQ/exec')
+    fetch('https://script.google.com/macros/s/AKfycbwjsnvnfVmURYof6Gb0xJrPxjbwSs6x7jjemDylWxw8J__SxnLale4BODtp0Vt8BNLgsQ/exec')
       
       .then(r => r.json())
       .then(json => {

@@ -185,11 +185,11 @@
         <input type="file" id="image-capture" accept="image/*" capture="environment" style="display:none">
         <button type="button" class="btn" style="margin-left:8px;" onclick="document.getElementById('image-capture').click()">ถ่ายภาพ</button>
       </label>
-      <label>
-      <input type="file" id="image" accept="image/*">
-      <button type="button" id="camera-btn" style="margin-left:10px;">ถ่ายภาพ</button>
-      <input type="file" id="camera-capture" accept="image/*" capture="environment" style="display:none;">
-      <label>
+     // <label>
+     // <input type="file" id="image" accept="image/*">
+     // <button type="button" id="camera-btn" style="margin-left:10px;">ถ่ายภาพ</button>
+     // <input type="file" id="camera-capture" accept="image/*" capture="environment" style="display:none;">
+     // <label>
     </div>
     <div id="preview-img"></div>
   </div>
@@ -212,6 +212,10 @@
   </div>
 </div>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
 <script>
 let selectedImageFile = null; // <-- เพิ่มตัวนี้ไว้เลย
 // 1. เมื่อผู้ใช้เลือกไฟล์ (จากอุปกรณ์)
@@ -263,9 +267,27 @@ function initMap() {
       userLocation.longitude = pos.lng;
       updateLocText(true);
   });
+
+  // เพิ่ม geocoder control
+  L.Control.geocoder({
+    defaultMarkGeocode: false,
+    placeholder: "ค้นหาสถานที่…"
+  })
+  .on('markgeocode', function(e) {
+    const center = e.geocode.center;
+    map.setView(center, 17);
+    marker.setLatLng(center); // ขยับ marker ไปตำแหน่งใหม่
+    userLocation.latitude = center.lat;
+    userLocation.longitude = center.lng;
+    updateLocText(true);
+    document.getElementById('btn-step3-next').disabled = false;
+  })
+  .addTo(map);
+
   updateLocText(false);
   document.getElementById('btn-step3-next').disabled = false;
 }
+
 
 function updateLocText(success=true){
   document.getElementById('location-status').innerHTML = success 

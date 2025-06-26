@@ -166,19 +166,42 @@
       <button class="btn" onclick="gotoStep(4)" id="btn-step3-next" disabled>ถัดไป</button>
     </div>
   </div>
-  <!-- Step 4 -->
-  <div class="form-step" id="step4">
-    <div class="step-header">ถ่ายรูปพืชผล</div>
-    <div class="camera-box">
-      <div class="camera-icon">📷</div>
-      <div id="camera-status">ถ่ายรูปซังข้าวโพดในแปลงนาของคุณ<br>รูปภาพจะช่วยทีมงานประเมินปริมาณซังข้าวโพด</div>
-      <input type="file" id="image" accept="image/*" capture="environment" style="margin-top:10px;">
+ 
+ <!-- ... หน้า Step 4 ... -->
+<div class="form-step" id="step4">
+  <div class="step-header">ถ่ายรูปพืชผล</div>
+  <div class="camera-box">
+    <div class="camera-icon">📷</div>
+    <div id="camera-status">
+      ถ่ายรูปซังข้าวโพดในแปลงนาของคุณ<br>
+      รูปภาพจะช่วยทีมงานประเมินปริมาณซังข้าวโพด
     </div>
-    <div class="step-btn-row">
-      <button class="btn btn-outline" onclick="gotoStep(3)">ย้อนกลับ</button>
-      <button class="btn" onclick="submitForm(event)">ส่งข้อมูล</button>
+    <div style="margin:16px 0;">
+      <label>
+        <input type="file" id="image-file" accept="image/*" style="display:none">
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('image-file').click()">เลือกไฟล์ในเครื่อง</button>
+      </label>
+      <label>
+        <input type="file" id="image-capture" accept="image/*" capture="environment" style="display:none">
+        <button type="button" class="btn" style="margin-left:8px;" onclick="document.getElementById('image-capture').click()">ถ่ายภาพ</button>
+      </label>
+      <label>
+      <input type="file" id="image" accept="image/*">
+      <button type="button" id="camera-btn" style="margin-left:10px;">ถ่ายภาพ</button>
+      <input type="file" id="camera-capture" accept="image/*" capture="environment" style="display:none;">
+      <label>
     </div>
+    <div id="preview-img"></div>
   </div>
+  <div class="step-btn-row">
+    <button class="btn btn-outline" onclick="gotoStep(3)">ย้อนกลับ</button>
+    <button class="btn" onclick="submitForm(event)">ส่งข้อมูล</button>
+  </div>
+</div>
+
+
+
+  
 </div>
 <div class="contact-box">
   <img src="logo.png" class="footer-logo" onclick="window.open('https://enableearth.eco/','_blank')"/><br>
@@ -190,6 +213,27 @@
 </div>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
+let selectedImageFile = null; // <-- เพิ่มตัวนี้ไว้เลย
+// 1. เมื่อผู้ใช้เลือกไฟล์ (จากอุปกรณ์)
+document.getElementById('image').addEventListener('change', function(e){
+  if (e.target.files && e.target.files[0]) {
+    selectedImageFile = e.target.files[0];
+    document.getElementById('camera-status').innerText = 'เลือกรูปภาพเรียบร้อย!';
+  }
+});
+
+// 2. เมื่อคลิกปุ่มถ่ายภาพ ให้เปิดกล้อง
+document.getElementById('camera-btn').addEventListener('click', function() {
+  document.getElementById('camera-capture').click();
+});
+
+// 3. เมื่อถ่ายภาพสำเร็จ
+document.getElementById('camera-capture').addEventListener('change', function(e){
+  if (e.target.files && e.target.files[0]) {
+    selectedImageFile = e.target.files[0];
+    document.getElementById('camera-status').innerText = 'ถ่ายภาพเรียบร้อย!';
+  }
+});
 let currentStep = 1;
 // สำหรับตำแหน่งแปลงนา (map)
 let userLocation = { latitude: 19.11, longitude: 99.47 };
@@ -291,9 +335,11 @@ function submitForm(e){
   data.append('farm_detail', document.getElementById('farm_detail').value.trim());
   data.append('latitude', userLocation.latitude);
   data.append('longitude', userLocation.longitude);
-  const imgFile = document.getElementById('image').files[0];
-  if(imgFile) data.append('image', imgFile);
+  //const imgFile = document.getElementById('image').files[0];
+ // if(imgFile) data.append('image', imgFile);
 
+  if(selectedImageFile) data.append('image', selectedImageFile);
+  
   // เปลี่ยน URL ด้านล่างให้ตรงกับ Google Apps Script ของคุณ
   const apiURL = 'https://script.google.com/macros/s/AKfycbwjsnvnfVmURYof6Gb0xJrPxjbwSs6x7jjemDylWxw8J__SxnLale4BODtp0Vt8BNLgsQ/exec';
   fetch(apiURL, { method:'POST', body:data })

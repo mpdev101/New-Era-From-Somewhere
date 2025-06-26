@@ -295,7 +295,7 @@ function submitForm(e){
   if(imgFile) data.append('image', imgFile);
 
   // เปลี่ยน URL ด้านล่างให้ตรงกับ Google Apps Script ของคุณ
-  const apiURL = 'https://script.google.com/macros/s/xxxxxxxxxxxxxxxxxxxxxxxxxxx/exec';
+  const apiURL = 'https://script.google.com/macros/s/AKfycbwjsnvnfVmURYof6Gb0xJrPxjbwSs6x7jjemDylWxw8J__SxnLale4BODtp0Vt8BNLgsQ/exec';
   fetch(apiURL, { method:'POST', body:data })
     .then(r => r.text())
     .then(t => {

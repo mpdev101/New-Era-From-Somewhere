@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Kanit:400,700&display=swap">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <style>
     :root {
       --primary: #04723d;
@@ -98,6 +99,7 @@
     }
     .footer-links a { color: #1658c2; text-decoration: none; margin: 0 7px; }
     .footer-links a:hover { text-decoration: underline; }
+    #preview-img img { margin-top:12px; max-width:92%; border-radius:11px; box-shadow:0 2px 8px #0002;}
     @media (max-width:500px) {
       .form-container { max-width:98vw; padding:0 }
       .form-step { padding: 10px 7vw 0 7vw;}
@@ -166,41 +168,35 @@
       <button class="btn" onclick="gotoStep(4)" id="btn-step3-next" disabled>ถัดไป</button>
     </div>
   </div>
- 
- <!-- ... หน้า Step 4 ... -->
-<div class="form-step" id="step4">
-  <div class="step-header">ถ่ายรูปพืชผล</div>
-  <div class="camera-box">
-    <div class="camera-icon">📷</div>
-    <div id="camera-status">
-      ถ่ายรูปซังข้าวโพดในแปลงนาของคุณ<br>
-      รูปภาพจะช่วยทีมงานประเมินปริมาณซังข้าวโพด
+  <!-- Step 4 -->
+  <div class="form-step" id="step4">
+    <div class="step-header">ถ่ายรูปพืชผล</div>
+    <div class="camera-box">
+      <div class="camera-icon">📷</div>
+      <div id="camera-status">
+        ถ่ายรูปซังข้าวโพดในแปลงนาของคุณ<br>
+        รูปภาพจะช่วยทีมงานประเมินปริมาณซังข้าวโพด
+      </div>
+      <div style="margin:16px 0;">
+        <label>
+          <input type="file" id="image-file" accept="image/*" style="display:none">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('image-file').click()">เลือกไฟล์ในเครื่อง</button>
+        </label>
+        <label>
+          <input type="file" id="image-capture" accept="image/*" capture="environment" style="display:none">
+          <button type="button" class="btn" style="margin-left:8px;" onclick="document.getElementById('image-capture').click()">ถ่ายภาพ</button>
+        </label>
+      </div>
+      <div id="preview-img"></div>
     </div>
-    <div style="margin:16px 0;">
-  <label>
-    <input type="file" id="image-file" accept="image/*" style="display:none">
-    <button type="button" class="btn btn-outline" onclick="document.getElementById('image-file').click()">เลือกไฟล์ในเครื่อง</button>
-  </label>
-  <label>
-    <input type="file" id="image-capture" accept="image/*" capture="environment" style="display:none">
-    <button type="button" class="btn" style="margin-left:8px;" onclick="document.getElementById('image-capture').click()">ถ่ายภาพ</button>
-  </label>
-</div>
-<div id="preview-img"></div>
-
+    <div class="step-btn-row">
+      <button class="btn btn-outline" onclick="gotoStep(3)">ย้อนกลับ</button>
+      <button class="btn" onclick="submitForm(event)">ส่งข้อมูล</button>
+    </div>
   </div>
-  <div class="step-btn-row">
-    <button class="btn btn-outline" onclick="gotoStep(3)">ย้อนกลับ</button>
-    <button class="btn" onclick="submitForm(event)">ส่งข้อมูล</button>
-  </div>
-</div>
-
-
-
-  
 </div>
 <div class="contact-box">
-  <img src="logo.png" class="footer-logo" onclick="window.open('https://enableearth.eco/','_blank')"/><br>
+  <img src="logo.jpg" class="footer-logo" onclick="window.open('https://enableearth.eco/','_blank')"/><br>
   <span class="footer-contact">ติดต่อเรา: <a href="mailto:contact@enableearth.eco">contact@enableearth.eco</a></span><br>
   <div class="footer-links">
     <a href="https://www.facebook.com/EnableEarthCarbonRemoval/" target="_blank">Facebook</a> | 
@@ -208,55 +204,12 @@
   </div>
 </div>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-
 <script>
-let selectedImageFile = null;
-
-// 1. เลือกไฟล์จากเครื่อง
-document.getElementById('image-file').addEventListener('change', function(e){
-  if (e.target.files && e.target.files[0]) {
-    selectedImageFile = e.target.files[0];
-    showPreview(selectedImageFile);
-    document.getElementById('camera-status').innerText = 'เลือกรูปภาพเรียบร้อย!';
-  }
-});
-
-// 2. ถ่ายภาพ
-document.getElementById('image-capture').addEventListener('change', function(e){
-  if (e.target.files && e.target.files[0]) {
-    selectedImageFile = e.target.files[0];
-    showPreview(selectedImageFile);
-    document.getElementById('camera-status').innerText = 'ถ่ายภาพเรียบร้อย!';
-  }
-});
-
-// ฟังก์ชันแสดงรูป preview
-function showPreview(file){
-  const previewDiv = document.getElementById('preview-img');
-  previewDiv.innerHTML = '';
-  if(file){
-    const img = document.createElement('img');
-    img.style.maxWidth = '100%';
-    img.style.maxHeight = '220px';
-    img.src = URL.createObjectURL(file);
-    previewDiv.appendChild(img);
-  }
-}
-
-// 3. เมื่อถ่ายภาพสำเร็จ
-document.getElementById('camera-capture').addEventListener('change', function(e){
-  if (e.target.files && e.target.files[0]) {
-    selectedImageFile = e.target.files[0];
-    document.getElementById('camera-status').innerText = 'ถ่ายภาพเรียบร้อย!';
-  }
-});
 let currentStep = 1;
-// สำหรับตำแหน่งแปลงนา (map)
 let userLocation = { latitude: 19.11, longitude: 99.47 };
 let map, marker, mapReady = false;
+let selectedImageFile = null; // ใช้เก็บไฟล์รูปที่เลือก/ถ่าย
 
 function gotoStep(step) {
   event.preventDefault();
@@ -283,7 +236,7 @@ function initMap() {
       updateLocText(true);
   });
 
-  // เพิ่ม geocoder control
+  // เพิ่ม geocoder control (search box)
   L.Control.geocoder({
     defaultMarkGeocode: false,
     placeholder: "ค้นหาสถานที่…"
@@ -291,7 +244,7 @@ function initMap() {
   .on('markgeocode', function(e) {
     const center = e.geocode.center;
     map.setView(center, 17);
-    marker.setLatLng(center); // ขยับ marker ไปตำแหน่งใหม่
+    marker.setLatLng(center);
     userLocation.latitude = center.lat;
     userLocation.longitude = center.lng;
     updateLocText(true);
@@ -302,7 +255,6 @@ function initMap() {
   updateLocText(false);
   document.getElementById('btn-step3-next').disabled = false;
 }
-
 
 function updateLocText(success=true){
   document.getElementById('location-status').innerHTML = success 
@@ -361,6 +313,29 @@ function validateStep(step) {
   return true;
 }
 
+// ส่วนนี้! event handler รูปภาพ
+document.getElementById('image-file').addEventListener('change', function(e){
+  if (e.target.files && e.target.files[0]) {
+    selectedImageFile = e.target.files[0];
+    showPreviewImage(selectedImageFile);
+    document.getElementById('camera-status').innerText = 'เลือกรูปภาพเรียบร้อย!';
+  }
+});
+document.getElementById('image-capture').addEventListener('change', function(e){
+  if (e.target.files && e.target.files[0]) {
+    selectedImageFile = e.target.files[0];
+    showPreviewImage(selectedImageFile);
+    document.getElementById('camera-status').innerText = 'ถ่ายภาพเรียบร้อย!';
+  }
+});
+function showPreviewImage(file) {
+  const reader = new FileReader();
+  reader.onload = function(e){
+    document.getElementById('preview-img').innerHTML = '<img src="'+e.target.result+'" alt="Preview"/>';
+  }
+  reader.readAsDataURL(file);
+}
+
 function submitForm(e){
   e.preventDefault();
   if(!validateStep(4)) return;
@@ -372,12 +347,9 @@ function submitForm(e){
   data.append('farm_detail', document.getElementById('farm_detail').value.trim());
   data.append('latitude', userLocation.latitude);
   data.append('longitude', userLocation.longitude);
-  //const imgFile = document.getElementById('image').files[0];
- // if(imgFile) data.append('image', imgFile);
-
   if(selectedImageFile) data.append('image', selectedImageFile);
-  
-  // เปลี่ยน URL ด้านล่างให้ตรงกับ Google Apps Script ของคุณ
+
+  // เปลี่ยน URL ให้ตรงกับ Apps Script ของคุณ
   const apiURL = 'https://script.google.com/macros/s/AKfycbwjsnvnfVmURYof6Gb0xJrPxjbwSs6x7jjemDylWxw8J__SxnLale4BODtp0Vt8BNLgsQ/exec';
   fetch(apiURL, { method:'POST', body:data })
     .then(r => r.text())

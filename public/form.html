@@ -1,291 +1,310 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <title>Enable Earth: ระบุตำแหน่งแปลงนา</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@600&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <title>Enable Earth - กรอกข้อมูลฟอร์ม</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Kanit:400,700&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
+    :root {
+      --primary: #04723d;
+      --accent: #198754;
+      --bg: #f9fbe8;
+      --white: #fff;
+      --shadow: 0 4px 18px 0 #0001;
+    }
     body {
-      margin: 0; padding: 0;
-      background: #f6f9ee;
-      font-family: 'Kanit', Arial, sans-serif;
-      color: #114d2f;
+      margin: 0; background: var(--bg); font-family: 'Kanit', Arial, sans-serif; color: #1a2b2b;
     }
     header {
-      background: #06733b;
-      padding: 12px 0 7px 0;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      box-shadow: 0 3px 20px #06733b17;
+      background: #024a18;
+      color: #fff; display: flex; align-items: center; padding: 12px 0 8px 0;
+      box-shadow: var(--shadow); justify-content: center; flex-direction: column;
     }
-    .logo {
-      height: 46px;
-      vertical-align: middle;
-    }
-    .header-text {
-      color: #fff;
-      font-size: 1.4rem;
-      font-weight: 700;
-      line-height: 1.2;
+    .logo { height: 48px; margin-bottom: 4px; cursor:pointer; }
+    .title {
+      font-size: 1.5em; font-weight: bold; letter-spacing:0.5px;
     }
     .subtitle {
-      color: #c5ffdc;
-      font-size: 1rem;
-      margin-top: 3px;
+      font-size: 1em; opacity: .85; margin-bottom: 8px;
     }
-    .progress-bar-bg {
-      background: #eee;
-      height: 8px;
-      border-radius: 5px;
-      width: 72%;
-      margin: 23px auto 0 auto;
-      position: relative;
+    .form-container {
+      background: var(--white);
+      max-width: 420px; margin: 28px auto 0 auto; border-radius: 14px;
+      box-shadow: var(--shadow); padding: 0 0 24px 0;
     }
-    .progress-bar-fill {
-      background: linear-gradient(90deg,#30c96b,#a8ffcf);
-      height: 8px;
-      border-radius: 5px;
-      width: 75%; /* เปลี่ยนเปอร์เซ็นต์ตามต้องการ */
-      position: absolute;
-      left: 0; top: 0;
-      transition: width .5s;
-    }
-    .progress-step {
-      text-align: center;
-      margin: 20px 0 0 0;
-      font-size: 1.12rem;
-      font-weight: 700;
-      color: #114d2f;
-    }
-    .main-box {
-      background: #fff;
-      max-width: 440px;
-      margin: 30px auto 0 auto;
-      border-radius: 16px;
-      box-shadow: 0 8px 38px #06733b19;
-      padding: 0 0 26px 0;
-      overflow: hidden;
-    }
-    .main-head {
-      background: #06733b;
-      color: #fff;
-      padding: 19px 0 9px 0;
-      text-align: center;
-      font-size: 1.38rem;
-      font-weight: 700;
+    .step-header {
+      background: var(--primary); color: #fff; border-radius: 14px 14px 0 0;
+      padding: 18px 0; text-align: center; font-size: 1.3em; font-weight: bold;
       letter-spacing: .5px;
     }
-    .main-content {
-      padding: 24px 30px 4px 30px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+    .progress-bar-bg {
+      width: 90%; height: 8px; margin: 18px auto 10px auto;
+      background: #eee; border-radius: 4px;
     }
-    .gps-box {
-      background: #f9fffa;
-      border: 2px dashed #60b979;
-      border-radius: 12px;
-      padding: 18px 13px 13px 13px;
-      width: 100%;
-      text-align: center;
-      margin-bottom: 20px;
-      min-height: 98px;
+    .progress-bar {
+      height: 8px; border-radius: 4px;
+      background: linear-gradient(90deg, var(--primary), #57e690);
+      transition: width .3s;
     }
-    .gps-icon {
-      font-size: 2.6rem;
-      color: #24bf4c;
-      margin-bottom: 3px;
-      display: block;
+    .form-step { display: none; padding: 12px 28px 0 28px; }
+    .form-step.active { display: block; }
+    .input-group { margin-bottom: 18px;}
+    label { font-weight: 500; display:block; margin-bottom: 6px; }
+    input[type="text"], input[type="number"], input[type="tel"] {
+      width: 100%; padding: 10px; border-radius: 6px;
+      border: 1.5px solid #c7c7c7; font-size: 1em; margin-bottom: 2px;
+      font-family: inherit; background: #f6f6fa;
     }
-    .gps-label-success {
-      color: #18a064;
-      font-weight: bold;
-      font-size: 1.17rem;
-      margin-bottom: 5px;
+    textarea { width: 100%; border-radius: 6px; border: 1.5px solid #c7c7c7;
+      padding: 10px; font-family: inherit; background: #f6f6fa;
     }
-    .gps-label-wait {
-      color: #bdbd17;
-      font-size: 1.09rem;
-      margin-bottom: 2px;
-    }
-    .coords-row {
-      color: #16693f;
-      font-size: 1.08rem;
-      margin-bottom: 2px;
-      font-weight: 500;
-      letter-spacing: .3px;
-    }
-    .gps-btn {
-      background: linear-gradient(90deg,#22ca88 70%,#9ef3ca);
-      color: #fff;
-      border: none;
-      padding: 14px 0;
-      border-radius: 13px;
-      font-size: 1.14rem;
-      font-weight: 700;
-      width: 100%;
-      box-shadow: 0 3px 13px #2da87923;
-      margin-bottom: 7px;
-      cursor: pointer;
+    .btn {
+      font-family: inherit; font-size: 1.1em; border-radius: 8px;
+      padding: 8px 28px; border: none; background: var(--accent); color: #fff;
+      box-shadow: 0 1px 8px #0002; margin-top: 8px; cursor: pointer;
       transition: background .15s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 11px;
     }
-    .gps-btn:active {
-      background: #23b75d;
+    .btn:hover, .btn:active { background: #04723d; }
+    .btn-outline {
+      background: #fff; color: var(--primary); border: 2px solid var(--primary);
+      margin-right: 12px;
     }
-    .desc {
-      text-align: center;
-      color: #2e6642;
-      font-size: .99rem;
-      margin-bottom: 7px;
-      margin-top: 2px;
-      font-weight: 400;
+    .location-box, .camera-box {
+      background: #f5fff4; border: 1.5px dashed #c9e5be;
+      border-radius: 11px; padding: 18px 10px; margin-bottom: 18px; text-align: center;
     }
-    .btn-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      margin: 17px 0 0 0;
-      width: 100%;
+    .location-icon, .camera-icon {
+      font-size: 2.5em; color: var(--accent); margin-bottom: 4px;
     }
-    .btn-row button {
-      flex: 1;
-      padding: 13px 0;
-      border-radius: 8px;
-      border: 1.5px solid #e5eee7;
-      background: #f2f2f2;
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: #217a4c;
-      cursor: pointer;
-      transition: background .13s, color .13s;
+    .mini-label { color: #666; font-size: 0.97em; margin-bottom: 3px;}
+    .step-btn-row {
+      display: flex; justify-content: space-between; margin-top: 20px;
     }
-    .btn-row button:active {
-      background: #e8f7ed;
-      color: #114d2f;
+    .disabled { opacity: .6; pointer-events: none;}
+    #map { width:100%; height: 230px; border-radius: 10px; margin: 12px 0;}
+    .leaflet-control-attribution {display:none}
+    .contact-box {
+      text-align: center; margin: 32px auto 0 auto; color: #075329;
+      font-size: 1.04em;
     }
-    .btn-row .primary {
-      background: linear-gradient(90deg,#22ca88 80%,#9ef3ca);
-      color: #fff;
-      border: none;
-      box-shadow: 0 1px 9px #c8f7e1a3;
-      margin-left: 9px;
+    .footer-logo { height: 34px; margin: 16px 0 8px 0; cursor:pointer;}
+    .footer-contact {
+      color: #247c43; margin: 0 0 3px 0; font-size: 1em;
     }
-    .footer {
-      margin: 37px auto 0 auto;
-      max-width: 450px;
-      text-align: center;
-      color: #057242;
-      font-size: 1.12rem;
+    .footer-links {
+      margin-top: 5px; color: #247c43;
     }
-    .footer .footer-logo {
-      height: 29px;
-      vertical-align: middle;
-      margin-right: 6px;
-      margin-bottom: -4px;
-    }
-    .footer .contact {
-      margin: 8px 0 0 0;
-      color: #185d36;
-      font-size: 1rem;
-      letter-spacing: 0.3px;
-    }
-    .footer .social {
-      margin: 9px 0 0 0;
-      color: #217a4c;
-      font-size: 1rem;
-    }
-    .footer a {
-      color: #217a4c;
-      margin: 0 4px;
-      text-decoration: none;
-      transition: color .14s;
-    }
-    .footer a:hover {
-      color: #114d2f;
-    }
-    @media (max-width: 600px){
-      .main-box { margin: 10px 2% 0 2%; }
-      .main-content { padding: 20px 5vw 4px 5vw; }
-      .footer { font-size: 1rem; }
+    .footer-links a { color: #1658c2; text-decoration: none; margin: 0 7px; }
+    .footer-links a:hover { text-decoration: underline; }
+    @media (max-width:500px) {
+      .form-container { max-width:98vw; padding:0 }
+      .form-step { padding: 10px 7vw 0 7vw;}
     }
   </style>
 </head>
 <body>
-  <header>
-    <img class="logo" src="https://mpdev101.github.io/New-Era-From-Somewhere/public/logo.jpg" alt="Enable Earth Logo">
-    <div>
-      <div class="header-text">Enable Earth</div>
-      <div class="subtitle">แพลตฟอร์มรวบรวมวัสดุข้าวโพด</div>
+<header>
+  <img src="public/logo.jpg" class="logo" alt="Enable Logo" onclick="window.open('https://enableearth.eco/', '_blank')"/>
+  <div class="title">Enable Earth</div>
+  <div class="subtitle">แพลตฟอร์มรวบรวมซังข้าวโพด</div>
+</header>
+<div class="progress-bar-bg">
+  <div id="progress-bar" class="progress-bar" style="width:25%"></div>
+</div>
+<div class="form-container">
+  <!-- Step 1 -->
+  <div class="form-step active" id="step1">
+    <div class="step-header">ข้อมูลส่วนตัว</div>
+    <div class="input-group">
+      <label>ชื่อ-นามสกุล</label>
+      <input type="text" id="fullname" required>
     </div>
-  </header>
-
-  <div class="progress-step">ขั้นตอนที่ 3 จาก 4</div>
-  <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
-  
-  <div class="main-box">
-    <div class="main-head">ตำแหน่งแปลงนา</div>
-    <div class="main-content">
-      <div class="gps-box" id="gpsbox">
-        <span class="gps-icon">📍</span>
-        <div id="gpsStatus" class="gps-label-wait">กรุณาระบุตำแหน่งแปลงของคุณ</div>
-        <div id="coords"></div>
-      </div>
-      <button class="gps-btn" id="getLocationBtn">
-        <span>🚀 ระบุตำแหน่งแปลงนา</span>
-      </button>
-      <div class="desc">ระบบจะใช้ GPS ในอุปกรณ์ของคุณเพื่อระบุตำแหน่งที่แม่นยำ</div>
-      <div class="btn-row">
-        <button type="button" onclick="history.back()">ย้อนกลับ</button>
-        <button type="button" class="primary" onclick="alert('ไปขั้นถัดไป (Demo)')">ถัดไป</button>
-      </div>
+    <div class="input-group">
+      <label>เบอร์โทรศัพท์</label>
+      <input type="tel" id="tel" pattern="[0-9]{9,10}" maxlength="10" required>
+    </div>
+    <div class="step-btn-row">
+      <div></div>
+      <button class="btn" onclick="gotoStep(2)">ถัดไป</button>
     </div>
   </div>
-
-  <div class="footer">
-    <img class="footer-logo" src="https://mpdev101.github.io/New-Era-From-Somewhere/public/logo.jpg" alt="Enable Earth Logo">
-    <span style="font-weight:600;font-size:1.16rem;">Enable Earth</span>
-    <div class="contact">ติดต่อเรา: <a href="mailto:contact@enableearth.eco">contact@enableearth.eco</a></div>
-    <div class="social">
-      <a href="#">Facebook</a> •
-      <a href="#">Messenger</a>
+  <!-- Step 2 -->
+  <div class="form-step" id="step2">
+    <div class="step-header">ข้อมูลพื้นที่เกษตร</div>
+    <div class="input-group">
+      <label>จำนวนไร่</label>
+      <input type="number" min="0.1" step="0.1" id="farm_area" required>
+    </div>
+    <div class="input-group">
+      <label>จำนวนเศษวัสดุเหลือทิ้งทางการเกษตร (ตัน)</label>
+      <input type="number" min="0" step="0.01" id="carbon_credit" required>
+    </div>
+    <div class="input-group">
+      <label>รายละเอียดเพิ่มเติม</label>
+      <textarea id="farm_detail" rows="2" placeholder="เช่น ซังข้าวโพดที่ต้องการให้เก็บ"></textarea>
+    </div>
+    <div class="step-btn-row">
+      <button class="btn btn-outline" onclick="gotoStep(1)">ย้อนกลับ</button>
+      <button class="btn" onclick="gotoStep(3)">ถัดไป</button>
     </div>
   </div>
+  <!-- Step 3 -->
+  <div class="form-step" id="step3">
+    <div class="step-header">ตำแหน่งแปลงนา</div>
+    <div class="location-box" id="locationBox">
+      <div class="location-icon">📍</div>
+      <div id="location-status">เลือกตำแหน่งแปลงนา</div>
+      <div id="location-coord"></div>
+      <div id="map"></div>
+      <button class="btn" onclick="setCurrentLocation(event)">ใช้ตำแหน่งปัจจุบัน</button>
+      <div style="font-size:.92em; color:#757;">เลื่อน marker บนแผนที่หากต้องการปรับตำแหน่ง</div>
+    </div>
+    <div class="step-btn-row">
+      <button class="btn btn-outline" onclick="gotoStep(2)">ย้อนกลับ</button>
+      <button class="btn" onclick="gotoStep(4)" id="btn-step3-next" disabled>ถัดไป</button>
+    </div>
+  </div>
+  <!-- Step 4 -->
+  <div class="form-step" id="step4">
+    <div class="step-header">ถ่ายรูปพืชผล</div>
+    <div class="camera-box">
+      <div class="camera-icon">📷</div>
+      <div id="camera-status">ถ่ายรูปซังข้าวโพดในแปลงนาของคุณ<br>รูปภาพจะช่วยทีมงานประเมินปริมาณซังข้าวโพด</div>
+      <input type="file" id="image" accept="image/*" capture="environment" style="margin-top:10px;">
+    </div>
+    <div class="step-btn-row">
+      <button class="btn btn-outline" onclick="gotoStep(3)">ย้อนกลับ</button>
+      <button class="btn" onclick="submitForm(event)">ส่งข้อมูล</button>
+    </div>
+  </div>
+</div>
+<div class="contact-box">
+  <img src="public/logo.jpg" class="footer-logo" onclick="window.open('https://enableearth.eco/','_blank')"/><br>
+  <span class="footer-contact">ติดต่อเรา: <a href="mailto:contact@enableearth.eco">contact@enableearth.eco</a></span><br>
+  <div class="footer-links">
+    <a href="https://www.facebook.com/EnableEarthCarbonRemoval/" target="_blank">Facebook</a> | 
+    <a href="https://m.me/EnableEarthCarbonRemoval/" target="_blank">Messenger</a>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+let currentStep = 1;
+// --------- ตำแหน่ง marker (map) ---------
+let userLocation = { latitude: 19.11, longitude: 99.47 }; // default (เปลี่ยนได้)
+let map, marker, mapReady = false;
 
-  <script>
-    const getLocationBtn = document.getElementById('getLocationBtn');
-    const gpsStatus = document.getElementById('gpsStatus');
-    const coordsDiv = document.getElementById('coords');
+function gotoStep(step) {
+  event.preventDefault();
+  if (step > 1 && !validateStep(currentStep)) return;
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('step'+i).classList.remove('active');
+  }
+  document.getElementById('step'+step).classList.add('active');
+  currentStep = step;
+  document.getElementById('progress-bar').style.width = (step*25)+'%';
+  if(step === 3 && !mapReady) initMap();
+  if(step === 3) setTimeout(()=>map.invalidateSize(), 350);
+}
 
-    getLocationBtn.onclick = function(){
-      gpsStatus.textContent = "กำลังค้นหาตำแหน่ง...";
-      gpsStatus.className = "gps-label-wait";
-      coordsDiv.textContent = "";
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(pos){
-          const lat = pos.coords.latitude.toFixed(6);
-          const lng = pos.coords.longitude.toFixed(6);
-          gpsStatus.textContent = "ได้ตำแหน่งแล้ว!";
-          gpsStatus.className = "gps-label-success";
-          coordsDiv.innerHTML = `<div class='coords-row'>ละติจูด: ${lat}</div><div class='coords-row'>ลองจิจูด: ${lng}</div>`;
-        }, function(){
-          gpsStatus.textContent = "ไม่สามารถเข้าถึงตำแหน่ง GPS ได้";
-          gpsStatus.className = "gps-label-wait";
-          coordsDiv.textContent = "";
-        });
-      } else {
-        gpsStatus.textContent = "เบราว์เซอร์ไม่รองรับ GPS";
-        gpsStatus.className = "gps-label-wait";
-      }
-    };
-  </script>
+function initMap() {
+  mapReady = true;
+  map = L.map('map').setView([userLocation.latitude, userLocation.longitude], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  marker = L.marker([userLocation.latitude, userLocation.longitude], {draggable:true}).addTo(map);
+  marker.on('dragend', function(e){
+      let pos = marker.getLatLng();
+      userLocation.latitude = pos.lat;
+      userLocation.longitude = pos.lng;
+      updateLocText(true);
+  });
+  updateLocText(false);
+  document.getElementById('btn-step3-next').disabled = false;
+}
+
+function updateLocText(success=true){
+  document.getElementById('location-status').innerHTML = success 
+    ? '<span style="color:green;font-weight:600;">เลือกตำแหน่งแล้ว!</span>'
+    : 'เลื่อน marker หรือใช้ตำแหน่งปัจจุบัน';
+  document.getElementById('location-coord').innerHTML =
+    'ละติจูด: '+userLocation.latitude+'<br>ลองจิจูด: '+userLocation.longitude;
+}
+
+// ใช้ GPS
+function setCurrentLocation(e) {
+  e.preventDefault();
+  const locStatus = document.getElementById('location-status');
+  locStatus.innerText = "กำลังค้นหาตำแหน่ง...";
+  if (!navigator.geolocation) {
+    locStatus.innerHTML = '<span style="color:red;">เบราว์เซอร์นี้ไม่รองรับ GPS</span>';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      userLocation.latitude = pos.coords.latitude;
+      userLocation.longitude = pos.coords.longitude;
+      marker.setLatLng([userLocation.latitude, userLocation.longitude]);
+      map.setView([userLocation.latitude, userLocation.longitude], 16);
+      updateLocText(true);
+      document.getElementById('btn-step3-next').disabled = false;
+    },
+    (err) => {
+      locStatus.innerHTML = '<span style="color:red;">ไม่สามารถหาตำแหน่งได้ ('+err.message+')</span>';
+    }
+  );
+}
+
+function validateStep(step) {
+  if(step===1) {
+    if(!document.getElementById('fullname').value.trim()) {
+      alert('กรุณากรอกชื่อ-นามสกุล'); return false;
+    }
+    if(!/^[0-9]{9,10}$/.test(document.getElementById('tel').value.trim())) {
+      alert('กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง'); return false;
+    }
+  }
+  if(step===2) {
+    if(!document.getElementById('farm_area').value.trim()) {
+      alert('กรุณากรอกจำนวนไร่'); return false;
+    }
+    if(!document.getElementById('carbon_credit').value.trim()) {
+      alert('กรุณากรอกจำนวนเศษวัสดุเหลือทิ้ง'); return false;
+    }
+  }
+  if(step===3) {
+    if(!userLocation.latitude || !userLocation.longitude) {
+      alert('กรุณาระบุตำแหน่งแปลงนา'); return false;
+    }
+  }
+  return true;
+}
+
+function submitForm(e){
+  e.preventDefault();
+  if(!validateStep(4)) return;
+  // รวบรวมข้อมูล
+  const data = new FormData();
+  data.append('plot_id', document.getElementById('fullname').value.trim());
+  data.append('phone', document.getElementById('tel').value.trim());
+  data.append('farm_area', document.getElementById('farm_area').value.trim());
+  data.append('carbon_credit', document.getElementById('carbon_credit').value.trim());
+  data.append('farm_detail', document.getElementById('farm_detail').value.trim());
+  data.append('latitude', userLocation.latitude);
+  data.append('longitude', userLocation.longitude);
+  const imgFile = document.getElementById('image').files[0];
+  if(imgFile) data.append('image', imgFile);
+
+  const apiURL = 'https://script.google.com/macros/s/AKfycbwjsnvnfVmURYof6Gb0xJrPxjbwSs6x7jjemDylWxw8J__SxnLale4BODtp0Vt8BNLgsQ/exec'; // เปลี่ยน URL ของคุณเอง
+  fetch(apiURL, { method:'POST', body:data })
+    .then(r => r.text())
+    .then(t => {
+      alert('ส่งข้อมูลสำเร็จ ขอบคุณที่ร่วมโครงการ!');
+      window.location.reload();
+    }).catch(e=>{
+      alert('ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่: '+e.message);
+    });
+}
+</script>
 </body>
 </html>

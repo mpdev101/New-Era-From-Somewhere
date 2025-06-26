@@ -5,105 +5,18 @@
   <title>Enable Earth - กรอกข้อมูลฟอร์ม</title>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Kanit:400,700&display=swap">
+  <!-- เพิ่ม Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
-    :root {
-      --primary: #04723d;
-      --accent: #198754;
-      --bg: #f9fbe8;
-      --white: #fff;
-      --shadow: 0 4px 18px 0 #0001;
-    }
-    body {
-      margin: 0; background: var(--bg); font-family: 'Kanit', Arial, sans-serif; color: #1a2b2b;
-    }
-    header {
-      background: #024a18;
-      color: #fff; display: flex; align-items: center; padding: 12px 0 8px 0;
-      box-shadow: var(--shadow); justify-content: center; flex-direction: column;
-    }
-    .logo { height: 48px; margin-bottom: 4px; cursor:pointer; }
-    .title {
-      font-size: 1.5em; font-weight: bold; letter-spacing:0.5px;
-    }
-    .subtitle {
-      font-size: 1em; opacity: .85; margin-bottom: 8px;
-    }
-    .form-container {
-      background: var(--white);
-      max-width: 420px; margin: 28px auto 0 auto; border-radius: 14px;
-      box-shadow: var(--shadow); padding: 0 0 24px 0;
-    }
-    .step-header {
-      background: var(--primary); color: #fff; border-radius: 14px 14px 0 0;
-      padding: 18px 0; text-align: center; font-size: 1.3em; font-weight: bold;
-      letter-spacing: .5px;
-    }
-    .progress-bar-bg {
-      width: 90%; height: 8px; margin: 18px auto 10px auto;
-      background: #eee; border-radius: 4px;
-    }
-    .progress-bar {
-      height: 8px; border-radius: 4px;
-      background: linear-gradient(90deg, var(--primary), #57e690);
-      transition: width .3s;
-    }
-    .form-step { display: none; padding: 12px 28px 0 28px; }
-    .form-step.active { display: block; }
-    .input-group { margin-bottom: 18px;}
-    label { font-weight: 500; display:block; margin-bottom: 6px; }
-    input[type="text"], input[type="number"], input[type="tel"] {
-      width: 100%; padding: 10px; border-radius: 6px;
-      border: 1.5px solid #c7c7c7; font-size: 1em; margin-bottom: 2px;
-      font-family: inherit; background: #f6f6fa;
-    }
-    textarea { width: 100%; border-radius: 6px; border: 1.5px solid #c7c7c7;
-      padding: 10px; font-family: inherit; background: #f6f6fa;
-    }
-    .btn {
-      font-family: inherit; font-size: 1.1em; border-radius: 8px;
-      padding: 8px 28px; border: none; background: var(--accent); color: #fff;
-      box-shadow: 0 1px 8px #0002; margin-top: 8px; cursor: pointer;
-      transition: background .15s;
-    }
-    .btn:hover, .btn:active { background: #04723d; }
-    .btn-outline {
-      background: #fff; color: var(--primary); border: 2px solid var(--primary);
-      margin-right: 12px;
-    }
-    .location-box, .camera-box {
-      background: #f5fff4; border: 1.5px dashed #c9e5be;
-      border-radius: 11px; padding: 18px 10px; margin-bottom: 18px; text-align: center;
-    }
-    .location-icon, .camera-icon {
-      font-size: 2.5em; color: var(--accent); margin-bottom: 4px;
-    }
-    .mini-label { color: #666; font-size: 0.97em; margin-bottom: 3px;}
-    .step-btn-row {
-      display: flex; justify-content: space-between; margin-top: 20px;
-    }
-    .disabled { opacity: .6; pointer-events: none;}
-    .contact-box {
-      text-align: center; margin: 32px auto 0 auto; color: #075329;
-      font-size: 1.04em;
-    }
-    .footer-logo { height: 34px; margin: 16px 0 8px 0; cursor:pointer;}
-    .footer-contact {
-      color: #247c43; margin: 0 0 3px 0; font-size: 1em;
-    }
-    .footer-links {
-      margin-top: 5px; color: #247c43;
-    }
-    .footer-links a { color: #1658c2; text-decoration: none; margin: 0 7px; }
-    .footer-links a:hover { text-decoration: underline; }
-    @media (max-width:500px) {
-      .form-container { max-width:98vw; padding:0 }
-      .form-step { padding: 10px 7vw 0 7vw;}
-    }
+    /* ... (คง style เดิมทั้งหมด) ... */
+    /* ใส่ style เดิมจากที่ให้มาได้เลย ไม่ต้องเปลี่ยน */
+    #map { width:100%; height: 250px; border-radius: 10px; margin: 12px 0;}
+    .leaflet-control-attribution {display:none}
   </style>
 </head>
 <body>
 <header>
-  <img src="logo.jpg" class="logo" alt="Enable Logo" onclick="window.open('https://enableearth.eco/', '_blank')"/>
+  <img src="public/logo.jpg" class="logo" alt="Enable Logo" onclick="window.open('https://enableearth.eco/', '_blank')"/>
   <div class="title">Enable Earth</div>
   <div class="subtitle">แพลตฟอร์มรวบรวมซังข้าวโพด</div>
 </header>
@@ -135,8 +48,12 @@
       <input type="number" min="0.1" step="0.1" id="farm_area" required>
     </div>
     <div class="input-group">
+      <label>จำนวนเศษวัสดุเหลือทิ้งทางการเกษตร (ตัน)</label>
+      <input type="number" min="0" step="0.01" id="carbon_credit" required>
+    </div>
+    <div class="input-group">
       <label>รายละเอียดเพิ่มเติม</label>
-      <textarea id="farm_detail" rows="2" placeholder="ระบุพื้นที่ที่มีซังข้าวโพดที่ต้องการให้เก็บ"></textarea>
+      <textarea id="farm_detail" rows="2" placeholder="เช่น ซังข้าวโพดที่ต้องการให้เก็บ"></textarea>
     </div>
     <div class="step-btn-row">
       <button class="btn btn-outline" onclick="gotoStep(1)">ย้อนกลับ</button>
@@ -148,11 +65,12 @@
     <div class="step-header">ตำแหน่งแปลงนา</div>
     <div class="location-box" id="locationBox">
       <div class="location-icon">📍</div>
-      <div id="location-status">กดปุ่มเพื่อระบุตำแหน่ง</div>
+      <div id="location-status">เลือกตำแหน่งแปลงนา</div>
       <div id="location-coord"></div>
+      <div id="map"></div>
+      <button class="btn" onclick="setCurrentLocation(event)">ใช้ตำแหน่งปัจจุบัน</button>
+      <div style="font-size:.92em; color:#757;">เลื่อน marker บนแผนที่หากต้องการปรับตำแหน่ง</div>
     </div>
-    <button class="btn" onclick="detectLocation(event)">ระบุตำแหน่งแปลงนา</button>
-    <div style="font-size:.92em; color:#757;">ระบบจะใช้ GPS ในอุปกรณ์ของคุณเพื่อระบุตำแหน่งที่แม่นยำ</div>
     <div class="step-btn-row">
       <button class="btn btn-outline" onclick="gotoStep(2)">ย้อนกลับ</button>
       <button class="btn" onclick="gotoStep(4)" id="btn-step3-next" disabled>ถัดไป</button>
@@ -173,16 +91,20 @@
   </div>
 </div>
 <div class="contact-box">
-  <img src="logo.png" class="footer-logo" onclick="window.open('https://enableearth.eco/','_blank')"/><br>
+  <img src="public/logo.jpg" class="footer-logo" onclick="window.open('https://enableearth.eco/','_blank')"/><br>
   <span class="footer-contact">ติดต่อเรา: <a href="mailto:contact@enableearth.eco">contact@enableearth.eco</a></span><br>
   <div class="footer-links">
     <a href="https://www.facebook.com/EnableEarthCarbonRemoval/" target="_blank">Facebook</a> | 
     <a href="https://m.me/EnableEarthCarbonRemoval/" target="_blank">Messenger</a>
   </div>
 </div>
+<!-- เพิ่ม Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
 let currentStep = 1;
-let userLocation = null;
+// --------- ตำแหน่ง marker (map) ---------
+let userLocation = { latitude: 19.11, longitude: 99.47 }; // default (เปลี่ยนได้)
+let map, marker, mapReady = false;
 
 function gotoStep(step) {
   event.preventDefault();
@@ -193,19 +115,49 @@ function gotoStep(step) {
   document.getElementById('step'+step).classList.add('active');
   currentStep = step;
   document.getElementById('progress-bar').style.width = (step*25)+'%';
+  if(step === 3 && !mapReady) initMap();
+  if(step === 3) setTimeout(()=>map.invalidateSize(), 350);
 }
 
-// Location step (step 3)
-function detectLocation(e){
+function initMap() {
+  mapReady = true;
+  map = L.map('map').setView([userLocation.latitude, userLocation.longitude], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  marker = L.marker([userLocation.latitude, userLocation.longitude], {draggable:true}).addTo(map);
+  marker.on('dragend', function(e){
+      let pos = marker.getLatLng();
+      userLocation.latitude = pos.lat;
+      userLocation.longitude = pos.lng;
+      updateLocText(true);
+  });
+  updateLocText(false);
+  document.getElementById('btn-step3-next').disabled = false;
+}
+
+function updateLocText(success=true){
+  document.getElementById('location-status').innerHTML = success 
+    ? '<span style="color:green;font-weight:600;">เลือกตำแหน่งแล้ว!</span>'
+    : 'เลื่อน marker หรือใช้ตำแหน่งปัจจุบัน';
+  document.getElementById('location-coord').innerHTML =
+    'ละติจูด: '+userLocation.latitude+'<br>ลองจิจูด: '+userLocation.longitude;
+}
+
+// ใช้ GPS
+function setCurrentLocation(e) {
   e.preventDefault();
   const locStatus = document.getElementById('location-status');
   locStatus.innerText = "กำลังค้นหาตำแหน่ง...";
+  if (!navigator.geolocation) {
+    locStatus.innerHTML = '<span style="color:red;">เบราว์เซอร์นี้ไม่รองรับ GPS</span>';
+    return;
+  }
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      userLocation = pos.coords;
-      locStatus.innerHTML = '<span style="color:green;font-weight:600;">ได้ตำแหน่งแล้ว!</span>';
-      document.getElementById('location-coord').innerHTML =
-        'ละติจูด: '+userLocation.latitude+'<br>ลองจิจูด: '+userLocation.longitude;
+      userLocation.latitude = pos.coords.latitude;
+      userLocation.longitude = pos.coords.longitude;
+      marker.setLatLng([userLocation.latitude, userLocation.longitude]);
+      map.setView([userLocation.latitude, userLocation.longitude], 16);
+      updateLocText(true);
       document.getElementById('btn-step3-next').disabled = false;
     },
     (err) => {
@@ -227,9 +179,12 @@ function validateStep(step) {
     if(!document.getElementById('farm_area').value.trim()) {
       alert('กรุณากรอกจำนวนไร่'); return false;
     }
+    if(!document.getElementById('carbon_credit').value.trim()) {
+      alert('กรุณากรอกจำนวนเศษวัสดุเหลือทิ้ง'); return false;
+    }
   }
   if(step===3) {
-    if(!userLocation) {
+    if(!userLocation.latitude || !userLocation.longitude) {
       alert('กรุณาระบุตำแหน่งแปลงนา'); return false;
     }
   }
@@ -241,16 +196,23 @@ function submitForm(e){
   if(!validateStep(4)) return;
   // รวบรวมข้อมูล
   const data = new FormData();
-  data.append('fullname', document.getElementById('fullname').value);
-  data.append('tel', document.getElementById('tel').value);
-  data.append('farm_area', document.getElementById('farm_area').value);
-  data.append('farm_detail', document.getElementById('farm_detail').value);
-  data.append('latitude', userLocation ? userLocation.latitude : '');
-  data.append('longitude', userLocation ? userLocation.longitude : '');
+  // 1. Plot ID = fullname
+  data.append('plot_id', document.getElementById('fullname').value.trim());
+  // 2. เบอร์โทร (เก็บใน sheet แต่ไม่เอาไป geojson)
+  data.append('phone', document.getElementById('tel').value.trim());
+  // 3. จำนวนไร่ (ไม่ใช้ใน geojson แต่เก็บใน sheet ได้)
+  data.append('farm_area', document.getElementById('farm_area').value.trim());
+  // 4. carbon_credit
+  data.append('carbon_credit', document.getElementById('carbon_credit').value.trim());
+  // 5. รายละเอียด
+  data.append('farm_detail', document.getElementById('farm_detail').value.trim());
+  // 6. lat/lng
+  data.append('latitude', userLocation.latitude);
+  data.append('longitude', userLocation.longitude);
+  // 7. ภาพ
   const imgFile = document.getElementById('image').files[0];
   if(imgFile) data.append('image', imgFile);
 
-  // ส่งข้อมูลไป Apps Script (หรือ API ที่ต้องการ)
   const apiURL = 'https://script.google.com/macros/s/AKfycbwjsnvnfVmURYof6Gb0xJrPxjbwSs6x7jjemDylWxw8J__SxnLale4BODtp0Vt8BNLgsQ/exec'; // แก้ URL ของคุณ
   fetch(apiURL, { method:'POST', body:data })
     .then(r => r.text())

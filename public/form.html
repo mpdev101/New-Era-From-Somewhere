@@ -2,132 +2,262 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Enable Earth: เพิ่ม Plot</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enable Earth: ระบุตำแหน่งแปลงนา</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@600&display=swap" rel="stylesheet">
   <style>
     body {
-      min-height: 100vh;
-      background: linear-gradient(135deg, #edf6f4 0%, #d2ffe8 100%);
+      margin: 0; padding: 0;
+      background: #f6f9ee;
+      font-family: 'Kanit', Arial, sans-serif;
+      color: #114d2f;
+    }
+    header {
+      background: #06733b;
+      padding: 12px 0 7px 0;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      box-shadow: 0 3px 20px #06733b17;
+    }
+    .logo {
+      height: 46px;
+      vertical-align: middle;
+    }
+    .header-text {
+      color: #fff;
+      font-size: 1.4rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .subtitle {
+      color: #c5ffdc;
+      font-size: 1rem;
+      margin-top: 3px;
+    }
+    .progress-bar-bg {
+      background: #eee;
+      height: 8px;
+      border-radius: 5px;
+      width: 72%;
+      margin: 23px auto 0 auto;
+      position: relative;
+    }
+    .progress-bar-fill {
+      background: linear-gradient(90deg,#30c96b,#a8ffcf);
+      height: 8px;
+      border-radius: 5px;
+      width: 75%; /* เปลี่ยนเปอร์เซ็นต์ตามต้องการ */
+      position: absolute;
+      left: 0; top: 0;
+      transition: width .5s;
+    }
+    .progress-step {
+      text-align: center;
+      margin: 20px 0 0 0;
+      font-size: 1.12rem;
+      font-weight: 700;
+      color: #114d2f;
+    }
+    .main-box {
+      background: #fff;
+      max-width: 440px;
+      margin: 30px auto 0 auto;
+      border-radius: 16px;
+      box-shadow: 0 8px 38px #06733b19;
+      padding: 0 0 26px 0;
+      overflow: hidden;
+    }
+    .main-head {
+      background: #06733b;
+      color: #fff;
+      padding: 19px 0 9px 0;
+      text-align: center;
+      font-size: 1.38rem;
+      font-weight: 700;
+      letter-spacing: .5px;
+    }
+    .main-content {
+      padding: 24px 30px 4px 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .gps-box {
+      background: #f9fffa;
+      border: 2px dashed #60b979;
+      border-radius: 12px;
+      padding: 18px 13px 13px 13px;
+      width: 100%;
+      text-align: center;
+      margin-bottom: 20px;
+      min-height: 98px;
+    }
+    .gps-icon {
+      font-size: 2.6rem;
+      color: #24bf4c;
+      margin-bottom: 3px;
+      display: block;
+    }
+    .gps-label-success {
+      color: #18a064;
+      font-weight: bold;
+      font-size: 1.17rem;
+      margin-bottom: 5px;
+    }
+    .gps-label-wait {
+      color: #bdbd17;
+      font-size: 1.09rem;
+      margin-bottom: 2px;
+    }
+    .coords-row {
+      color: #16693f;
+      font-size: 1.08rem;
+      margin-bottom: 2px;
+      font-weight: 500;
+      letter-spacing: .3px;
+    }
+    .gps-btn {
+      background: linear-gradient(90deg,#22ca88 70%,#9ef3ca);
+      color: #fff;
+      border: none;
+      padding: 14px 0;
+      border-radius: 13px;
+      font-size: 1.14rem;
+      font-weight: 700;
+      width: 100%;
+      box-shadow: 0 3px 13px #2da87923;
+      margin-bottom: 7px;
+      cursor: pointer;
+      transition: background .15s;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'Kanit', Arial, sans-serif;
+      gap: 11px;
     }
-    .form-card {
-      background: #fff;
-      border-radius: 22px;
-      box-shadow: 0 8px 40px #2da87914, 0 2px 8px #0002;
-      padding: 36px 24px 30px 24px;
-      max-width: 370px;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      animation: fadein .8s;
+    .gps-btn:active {
+      background: #23b75d;
     }
-    @keyframes fadein { from {opacity: 0; transform: translateY(28px);} to {opacity:1;transform:none;} }
-
-    .form-card h2 {
-      color: #20be7b;
-      font-size: 2rem;
-      margin-bottom: 18px;
-      letter-spacing: 1px;
+    .desc {
       text-align: center;
-      font-weight: 700;
+      color: #2e6642;
+      font-size: .99rem;
+      margin-bottom: 7px;
+      margin-top: 2px;
+      font-weight: 400;
     }
-    form {
-      width: 100%;
+    .btn-row {
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
       gap: 14px;
-    }
-    input[type=text], input[type=number] {
+      margin: 17px 0 0 0;
       width: 100%;
-      padding: 13px 13px;
-      font-size: 1.12rem;
-      border-radius: 11px;
-      border: 1.7px solid #e5eee7;
-      background: #f5fdfb;
-      margin-bottom: 2px;
-      transition: border .17s;
-      font-family: inherit;
-      outline: none;
     }
-    input[type=text]:focus, input[type=number]:focus {
-      border: 1.7px solid #20be7b;
-      background: #e4fcf0;
-    }
-    button[type=submit] {
-      width: 100%;
-      padding: 15px 0;
-      font-size: 1.13rem;
+    .btn-row button {
+      flex: 1;
+      padding: 13px 0;
+      border-radius: 8px;
+      border: 1.5px solid #e5eee7;
+      background: #f2f2f2;
+      font-size: 1.05rem;
       font-weight: 700;
-      color: #fff;
-      background: linear-gradient(90deg,#22ca88 80%,#9ef3ca);
-      border: none;
-      border-radius: 14px;
-      margin-top: 14px;
-      box-shadow: 0 1px 12px #7cf8b649;
+      color: #217a4c;
       cursor: pointer;
-      transition: background .16s, transform .07s;
-      letter-spacing: 1px;
+      transition: background .13s, color .13s;
     }
-    button[type=submit]:active {
-      background: #1aa060;
-      transform: scale(.99);
+    .btn-row button:active {
+      background: #e8f7ed;
+      color: #114d2f;
     }
-    .msg {
-      margin: 14px 0 0 0;
-      font-weight: 600;
-      font-size: 1rem;
+    .btn-row .primary {
+      background: linear-gradient(90deg,#22ca88 80%,#9ef3ca);
+      color: #fff;
+      border: none;
+      box-shadow: 0 1px 9px #c8f7e1a3;
+      margin-left: 9px;
+    }
+    .footer {
+      margin: 37px auto 0 auto;
+      max-width: 450px;
       text-align: center;
-      color: #18a064;
-      min-height: 26px;
-      transition: color .2s;
+      color: #057242;
+      font-size: 1.12rem;
     }
-    .msg.error { color: #e43c3c; }
-    @media (max-width: 500px){
-      .form-card { padding: 23px 8px 20px 8px; }
-      .form-card h2 { font-size: 1.33rem; }
+    .footer .footer-logo {
+      height: 29px;
+      vertical-align: middle;
+      margin-right: 6px;
+      margin-bottom: -4px;
+    }
+    .footer .contact {
+      margin: 8px 0 0 0;
+      color: #185d36;
+      font-size: 1rem;
+      letter-spacing: 0.3px;
+    }
+    .footer .social {
+      margin: 9px 0 0 0;
+      color: #217a4c;
+      font-size: 1rem;
+    }
+    .footer a {
+      color: #217a4c;
+      margin: 0 4px;
+      text-decoration: none;
+      transition: color .14s;
+    }
+    .footer a:hover {
+      color: #114d2f;
+    }
+    @media (max-width: 600px){
+      .main-box { margin: 10px 2% 0 2%; }
+      .main-content { padding: 20px 5vw 4px 5vw; }
+      .footer { font-size: 1rem; }
     }
   </style>
 </head>
 <body>
-  <div class="form-card">
-    <h2>เพิ่มข้อมูล Plot ใหม่</h2>
-    <form id="dataform" autocomplete="off">
-      <input type="text" name="plot_id" placeholder="Plot ID (เช่น MJD001)" required>
-      <input type="number" step="0.01" name="carbon_credit" placeholder="Carbon Credit (เช่น 4.1)" required>
-      <input type="text" name="longitude" placeholder="Longitude (ลองจิจูด)" required>
-      <input type="text" name="latitude" placeholder="Latitude (ละติจูด)" required>
-      <button type="submit">+ เพิ่มข้อมูล</button>
-    </form>
-    <div class="msg" id="msg"></div>
-  </div>
-  <script>
-    const apiURL = 'https://script.google.com/macros/s/AKfycbwjsnvnfVmURYof6Gb0xJrPxjbwSs6x7jjemDylWxw8J__SxnLale4BODtp0Vt8BNLgsQ/exec'; // ของคุณ
+  <header>
+    <img class="logo" src="https://mpdev101.github.io/New-Era-From-Somewhere/public/logo.jpg" alt="Enable Earth Logo">
+    <div>
+      <div class="header-text">Enable Earth</div>
+      <div class="subtitle">แพลตฟอร์มรวบรวมวัสดุข้าวโพด</div>
+    </div>
+  </header>
 
-    document.getElementById('dataform').onsubmit = async function(e) {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const msg = document.getElementById('msg');
-      msg.textContent = "กำลังส่งข้อมูล...";
-      msg.className = "msg";
-      try {
-        await fetch(apiURL, {
-          method: 'POST',
-          body: formData
-        });
-        msg.textContent = "ส่งข้อมูลสำเร็จ!";
-        msg.className = "msg";
-        e.target.reset();
-      } catch(err) {
-        msg.textContent = "ส่งข้อมูลไม่สำเร็จ";
-        msg.className = "msg error";
-      }
-    };
-  </script>
-</body>
-</html>
+  <div class="progress-step">ขั้นตอนที่ 3 จาก 4</div>
+  <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
+  
+  <div class="main-box">
+    <div class="main-head">ตำแหน่งแปลงนา</div>
+    <div class="main-content">
+      <div class="gps-box" id="gpsbox">
+        <span class="gps-icon">📍</span>
+        <div id="gpsStatus" class="gps-label-wait">กรุณาระบุตำแหน่งแปลงของคุณ</div>
+        <div id="coords"></div>
+      </div>
+      <button class="gps-btn" id="getLocationBtn">
+        <span>🚀 ระบุตำแหน่งแปลงนา</span>
+      </button>
+      <div class="desc">ระบบจะใช้ GPS ในอุปกรณ์ของคุณเพื่อระบุตำแหน่งที่แม่นยำ</div>
+      <div class="btn-row">
+        <button type="button" onclick="history.back()">ย้อนกลับ</button>
+        <button type="button" class="primary" onclick="alert('ไปขั้นถัดไป (Demo)')">ถัดไป</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <img class="footer-logo" src="https://mpdev101.github.io/New-Era-From-Somewhere/public/logo.jpg" alt="Enable Earth Logo">
+    <span style="font-weight:600;font-size:1.16rem;">Enable Earth</span>
+    <div class="contact">ติดต่อเรา: <a href="mailto:contact@enableearth.eco">contact@enableearth.eco</a></div>
+    <div class="social">
+      <a href="#">Facebook</a> •
+      <a href="#">Messenger</a>
+    </div>
+  </div>
+
+  <

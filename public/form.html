@@ -177,17 +177,17 @@
       รูปภาพจะช่วยทีมงานประเมินปริมาณซังข้าวโพด
     </div>
     <div style="margin:16px 0;">
-      <label>
-        <input type="file" id="image-file" accept="image/*" style="display:none">
-        <button type="button" class="btn btn-outline" onclick="document.getElementById('image-file').click()">เลือกไฟล์ในเครื่อง</button>
-      </label>
-      <label>
-        <input type="file" id="image-capture" accept="image/*" capture="environment" style="display:none">
-        <button type="button" class="btn" style="margin-left:8px;" onclick="document.getElementById('image-capture').click()">ถ่ายภาพ</button>
-      </label>
-    
-    </div>
-    <div id="preview-img"></div>
+  <label>
+    <input type="file" id="image-file" accept="image/*" style="display:none">
+    <button type="button" class="btn btn-outline" onclick="document.getElementById('image-file').click()">เลือกไฟล์ในเครื่อง</button>
+  </label>
+  <label>
+    <input type="file" id="image-capture" accept="image/*" capture="environment" style="display:none">
+    <button type="button" class="btn" style="margin-left:8px;" onclick="document.getElementById('image-capture').click()">ถ่ายภาพ</button>
+  </label>
+</div>
+<div id="preview-img"></div>
+
   </div>
   <div class="step-btn-row">
     <button class="btn btn-outline" onclick="gotoStep(3)">ย้อนกลับ</button>
@@ -213,19 +213,38 @@
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
 <script>
-let selectedImageFile = null; // <-- เพิ่มตัวนี้ไว้เลย
-// 1. เมื่อผู้ใช้เลือกไฟล์ (จากอุปกรณ์)
-document.getElementById('image').addEventListener('change', function(e){
+let selectedImageFile = null;
+
+// 1. เลือกไฟล์จากเครื่อง
+document.getElementById('image-file').addEventListener('change', function(e){
   if (e.target.files && e.target.files[0]) {
     selectedImageFile = e.target.files[0];
+    showPreview(selectedImageFile);
     document.getElementById('camera-status').innerText = 'เลือกรูปภาพเรียบร้อย!';
   }
 });
 
-// 2. เมื่อคลิกปุ่มถ่ายภาพ ให้เปิดกล้อง
-document.getElementById('camera-btn').addEventListener('click', function() {
-  document.getElementById('camera-capture').click();
+// 2. ถ่ายภาพ
+document.getElementById('image-capture').addEventListener('change', function(e){
+  if (e.target.files && e.target.files[0]) {
+    selectedImageFile = e.target.files[0];
+    showPreview(selectedImageFile);
+    document.getElementById('camera-status').innerText = 'ถ่ายภาพเรียบร้อย!';
+  }
 });
+
+// ฟังก์ชันแสดงรูป preview
+function showPreview(file){
+  const previewDiv = document.getElementById('preview-img');
+  previewDiv.innerHTML = '';
+  if(file){
+    const img = document.createElement('img');
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '220px';
+    img.src = URL.createObjectURL(file);
+    previewDiv.appendChild(img);
+  }
+}
 
 // 3. เมื่อถ่ายภาพสำเร็จ
 document.getElementById('camera-capture').addEventListener('change', function(e){

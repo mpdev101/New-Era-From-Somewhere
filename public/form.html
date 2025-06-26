@@ -106,7 +106,7 @@
 </head>
 <body>
 <header>
-  <img src="public/logo.jpg" class="logo" alt="Enable Logo" onclick="window.open('https://enableearth.eco/', '_blank')"/>
+  <img src="https://enableearth.eco/wp-content/uploads/2023/11/enable-logo.png" class="logo" alt="Enable Logo" onclick="window.open('https://enableearth.eco/', '_blank')"/>
   <div class="title">Enable Earth</div>
   <div class="subtitle">แพลตฟอร์มรวบรวมซังข้าวโพด</div>
 </header>
@@ -123,7 +123,7 @@
     </div>
     <div class="input-group">
       <label>เบอร์โทรศัพท์</label>
-      <input type="tel" id="tel" pattern="[0-9]{9,10}" maxlength="10" required>
+      <input type="tel" id="phone" pattern="[0-9]{9,10}" maxlength="10" required>
     </div>
     <div class="step-btn-row">
       <div></div>
@@ -181,7 +181,7 @@
   </div>
 </div>
 <div class="contact-box">
-  <img src="public/logo.jpg" class="footer-logo" onclick="window.open('https://enableearth.eco/','_blank')"/><br>
+  <img src="https://enableearth.eco/wp-content/uploads/2023/11/enable-logo.png" class="footer-logo" onclick="window.open('https://enableearth.eco/','_blank')"/><br>
   <span class="footer-contact">ติดต่อเรา: <a href="mailto:contact@enableearth.eco">contact@enableearth.eco</a></span><br>
   <div class="footer-links">
     <a href="https://www.facebook.com/EnableEarthCarbonRemoval/" target="_blank">Facebook</a> | 
@@ -191,8 +191,8 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
 let currentStep = 1;
-// --------- ตำแหน่ง marker (map) ---------
-let userLocation = { latitude: 19.11, longitude: 99.47 }; // default (เปลี่ยนได้)
+// สำหรับตำแหน่งแปลงนา (map)
+let userLocation = { latitude: 19.11, longitude: 99.47 };
 let map, marker, mapReady = false;
 
 function gotoStep(step) {
@@ -260,7 +260,7 @@ function validateStep(step) {
     if(!document.getElementById('fullname').value.trim()) {
       alert('กรุณากรอกชื่อ-นามสกุล'); return false;
     }
-    if(!/^[0-9]{9,10}$/.test(document.getElementById('tel').value.trim())) {
+    if(!/^[0-9]{9,10}$/.test(document.getElementById('phone').value.trim())) {
       alert('กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง'); return false;
     }
   }
@@ -283,10 +283,9 @@ function validateStep(step) {
 function submitForm(e){
   e.preventDefault();
   if(!validateStep(4)) return;
-  // รวบรวมข้อมูล
   const data = new FormData();
   data.append('plot_id', document.getElementById('fullname').value.trim());
-  data.append('phone', document.getElementById('tel').value.trim());
+  data.append('phone', document.getElementById('phone').value.trim());
   data.append('farm_area', document.getElementById('farm_area').value.trim());
   data.append('carbon_credit', document.getElementById('carbon_credit').value.trim());
   data.append('farm_detail', document.getElementById('farm_detail').value.trim());
@@ -295,7 +294,8 @@ function submitForm(e){
   const imgFile = document.getElementById('image').files[0];
   if(imgFile) data.append('image', imgFile);
 
-  const apiURL = 'https://script.google.com/macros/s/AKfycbwjsnvnfVmURYof6Gb0xJrPxjbwSs6x7jjemDylWxw8J__SxnLale4BODtp0Vt8BNLgsQ/exec'; // เปลี่ยน URL ของคุณเอง
+  // เปลี่ยน URL ด้านล่างให้ตรงกับ Google Apps Script ของคุณ
+  const apiURL = 'https://script.google.com/macros/s/xxxxxxxxxxxxxxxxxxxxxxxxxxx/exec';
   fetch(apiURL, { method:'POST', body:data })
     .then(r => r.text())
     .then(t => {
